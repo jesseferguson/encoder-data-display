@@ -24,6 +24,8 @@
             try {
                 const response = await fetch('https://api.github.com/repos/jesseferguson/Encoder/contents/data/data.txt', {
                     headers: {
+                        // Uncomment the next line and replace 'YOUR_GITHUB_TOKEN' if your repository is private
+                        // 'Authorization': 'Bearer YOUR_GITHUB_TOKEN',
                         'Accept': 'application/vnd.github.v3.raw'
                     }
                 });
