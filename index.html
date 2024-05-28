@@ -37,18 +37,27 @@
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
 
+    let chart;
+
     document.addEventListener('DOMContentLoaded', function () {
-      const dbRef = firebase.database().ref('/test');
+      const dbRef = firebase.database().ref('/encoderData');
       
       dbRef.on('value', (snapshot) => {
         const data = snapshot.val();
+        console.log("Data from Firebase:", data); // Debug logging
+
         if (data) {
-          document.getElementById('current-speed').innerText = `Current Speed: ${data.currentSpeed.toFixed(2)} feet/min`;
-          document.getElementById('total-distance').innerText = `Total Distance Today: ${data.totalDistance.toFixed(2)} feet`;
-          
+          document.getElementById('current-speed').innerText = `Current Speed: ${data.currentSpeed ? (-data.currentSpeed).toFixed(2) : 0} feet/min`;
+          document.getElementById('total-distance').innerText = `Total Distance Today: ${data.totalDistance ? (-data.totalDistance).toFixed(2) : 0} feet`;
+
           const ctx = document.getElementById('speed-percentage').getContext('2d');
-          const percentage = (data.currentSpeed / 650) * 100;
-          const chart = new Chart(ctx, {
+          const percentage = data.currentSpeed ? (-data.currentSpeed / 650) * 100 : 0;
+          
+          if (chart) {
+            chart.destroy();
+          }
+
+          chart = new Chart(ctx, {
             type: 'doughnut',
             data: {
               labels: ['Current Speed (%)', 'Remaining (%)'],
@@ -63,7 +72,11 @@
               maintainAspectRatio: false
             }
           });
+        } else {
+          console.log("No data available");
         }
+      }, (error) => {
+        console.error("Error fetching data:", error); // Debug logging for errors
       });
     });
   </script>
@@ -75,3 +88,4 @@
   <div id="total-distance">Total Distance Today: 0 feet</div>
 </body>
 </html>
+
