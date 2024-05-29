@@ -8,6 +8,7 @@
       text-align: center;
       margin: 0;
       padding: 20px;
+      overflow: hidden; /* Prevent scrolling */
     }
     .machine-data {
       margin-bottom: 40px;
@@ -22,8 +23,10 @@
     }
     .speed-percentage {
       margin: 20px auto;
-      width: 300px;
-      height: 300px;
+      width: 100px; /* Fixed width */
+      height: 300px; /* Fixed height */
+      max-width: 100px; /* Fixed max-width */
+      max-height: 300px; /* Fixed max-height */
     }
     .total-distance, .total-distance-month, .total-distance-quarter {
       font-size: 1.5em;
@@ -51,6 +54,31 @@
     document.addEventListener('DOMContentLoaded', function () {
       machines.forEach(machine => {
         const dbRef = firebase.database().ref(`/${machine}`);
+        const ctx = document.getElementById(`${machine}-speed-percentage`).getContext('2d');
+
+        charts[machine] = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: ['Speed Percentage'],
+            datasets: [{
+              label: 'Speed %',
+              data: [0],
+              backgroundColor: ['#4CAF50'],
+              borderColor: ['#4CAF50'],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              y: {
+                beginAtZero: true,
+                max: 100
+              }
+            }
+          }
+        });
 
         dbRef.on('value', (snapshot) => {
           const data = snapshot.val();
@@ -62,28 +90,9 @@
             document.getElementById(`${machine}-total-distance-month`).innerText = `Total Distance This Month: ${data.totalDistanceMonth ? (data.totalDistanceMonth).toFixed(2) : 0} feet`;
             document.getElementById(`${machine}-total-distance-quarter`).innerText = `Total Distance This Quarter: ${data.totalDistanceQuarter ? (data.totalDistanceQuarter).toFixed(2) : 0} feet`;
 
-            const ctx = document.getElementById(`${machine}-speed-percentage`).getContext('2d');
-            const percentage = data.currentSpeed ? (-data.currentSpeed / 650) * 100 : 0;
-            
-            if (charts[machine]) {
-              charts[machine].destroy();
-            }
-
-            charts[machine] = new Chart(ctx, {
-              type: 'doughnut',
-              data: {
-                labels: ['Current Speed (%)', 'Remaining (%)'],
-                datasets: [{
-                  data: [percentage, 100 - percentage],
-                  backgroundColor: ['#4CAF50', '#e0e0e0'],
-                  borderWidth: 1
-                }]
-              },
-              options: {
-                responsive: true,
-                maintainAspectRatio: false
-              }
-            });
+            const percentage = data.currentSpeed ? (data.currentSpeed / 650) * 100 : 0;
+            charts[machine].data.datasets[0].data[0] = percentage; // Update the existing data point
+            charts[machine].update();
           } else {
             console.log("No data available");
           }
@@ -99,6 +108,7 @@
   <div id="17Nilpeter" class="machine-data">
     <div class="machine-title">Machine 17Nilpeter</div>
     <div id="17Nilpeter-current-speed" class="current-speed">Current Speed: 0 feet/min</div>
+    <canvas id="17Nilpeter-speed-percentage" class="speed-percentage"></canvas>
     <div id="17Nilpeter-total-distance" class="total-distance">Total Distance Today: 0 feet</div>
     <div id="17Nilpeter-total-distance-month" class="total-distance-month">Total Distance This Month: 0 feet</div>
     <div id="17Nilpeter-total-distance-quarter" class="total-distance-quarter">Total Distance This Quarter: 0 feet</div>
