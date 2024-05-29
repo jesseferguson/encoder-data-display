@@ -20,6 +20,9 @@
     .current-speed {
       font-size: 2em;
       margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     .speed-percentage {
       margin: 20px auto;
@@ -33,13 +36,16 @@
       margin-top: 20px;
     }
     .fire-icon {
-      width: 50px;
-      height: 50px;
-      display: inline-block;
-      vertical-align: middle;
+      width: 200px;
+      height: 200px;
+      display: none;
       background: url('https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExY3BqMXdyZjVkbDlxcWwyNnNzMzIzaHhjY2swbzF5Zm42dWhjeHprdCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/xT5LMOvzyqSyIGqlsk/giphy.gif') no-repeat center center;
       background-size: contain;
     }
+    img {
+            width: 100px;
+            height: auto;
+        }
   </style>
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
@@ -102,16 +108,15 @@
             charts[machine].data.datasets[0].backgroundColor[0] = backgroundColor;
             charts[machine].update();
 
-            document.getElementById(`${machine}-current-speed`).innerHTML = `Current Speed: ${currentSpeed.toFixed(2)} feet/min`;
-            document.getElementById(`${machine}-total-distance`).innerText = `Total Distance Today: ${data.totalDistance ? (data.totalDistance).toFixed(2) : 0} feet`;
-            document.getElementById(`${machine}-total-distance-month`).innerText = `Total Distance This Month: ${data.totalDistanceMonth ? (data.totalDistanceMonth).toFixed(2) : 0} feet`;
-            document.getElementById(`${machine}-total-distance-quarter`).innerText = `Total Distance This Quarter: ${data.totalDistanceQuarter ? (data.totalDistanceQuarter).toFixed(2) : 0} feet`;
-
-            if (currentSpeed > 400) {
+            document.getElementById(`${machine}-current-speed`).innerHTML = ` ${currentSpeed.toFixed(2)} feet/min <span id="${machine}-fire-icon" class="fire-icon"></span>`;
+            if (currentSpeed > 250) {
               document.getElementById(`${machine}-fire-icon`).style.display = 'inline-block';
             } else {
               document.getElementById(`${machine}-fire-icon`).style.display = 'none';
             }
+            document.getElementById(`${machine}-total-distance`).innerText = `Total Distance Today: ${data.totalDistance ? (data.totalDistance).toFixed(2) : 0} feet`;
+            document.getElementById(`${machine}-total-distance-month`).innerText = `Total Distance This Month: ${data.totalDistanceMonth ? (data.totalDistanceMonth).toFixed(2) : 0} feet`;
+            document.getElementById(`${machine}-total-distance-quarter`).innerText = `Total Distance This Quarter: ${data.totalDistanceQuarter ? (data.totalDistanceQuarter).toFixed(2) : 0} feet`;
           } else {
             console.log("No data available");
           }
@@ -123,10 +128,9 @@
   </script>
 </head>
 <body>
-  <h1>Real-Time Encoder Data</h1>
   <div id="17Nilpeter" class="machine-data">
     <div class="machine-title">Machine 17Nilpeter</div>
-    <div id="17Nilpeter-current-speed" class="current-speed">Current Speed: 0 feet/min <span id="17Nilpeter-fire-icon" class="fire-icon" style="display: none;"></span></div>
+    <div id="17Nilpeter-current-speed" class="current-speed"> 0 feet/min <span id="17Nilpeter-fire-icon" class="fire-icon" style="display: none;"></span></div>
     <canvas id="17Nilpeter-speed-percentage" class="speed-percentage"></canvas>
     <div id="17Nilpeter-total-distance" class="total-distance">Total Distance Today: 0 feet</div>
     <div id="17Nilpeter-total-distance-month" class="total-distance-month">Total Distance This Month: 0 feet</div>
