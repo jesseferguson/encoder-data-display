@@ -32,6 +32,14 @@
       font-size: 1.5em;
       margin-top: 20px;
     }
+    .fire-icon {
+      width: 50px;
+      height: 50px;
+      display: inline-block;
+      vertical-align: middle;
+      background: url('https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif') no-repeat center center;
+      background-size: contain;
+    }
   </style>
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
@@ -85,14 +93,25 @@
           console.log(`Data from Firebase (${machine}):`, data);
 
           if (data) {
-            document.getElementById(`${machine}-current-speed`).innerText = `Current Speed: ${data.currentSpeed ? (data.currentSpeed).toFixed(2) : 0} feet/min`;
+            const currentSpeed = data.currentSpeed ? data.currentSpeed : 0;
+            const percentage = (currentSpeed / 650) * 100;
+            const backgroundColor = percentage < 15 ? '#FF0000' :
+                                    percentage < 35 ? '#FFA500' : '#4CAF50';
+
+            charts[machine].data.datasets[0].data[0] = percentage;
+            charts[machine].data.datasets[0].backgroundColor[0] = backgroundColor;
+            charts[machine].update();
+
+            document.getElementById(`${machine}-current-speed`).innerHTML = `Current Speed: ${currentSpeed.toFixed(2)} feet/min`;
             document.getElementById(`${machine}-total-distance`).innerText = `Total Distance Today: ${data.totalDistance ? (data.totalDistance).toFixed(2) : 0} feet`;
             document.getElementById(`${machine}-total-distance-month`).innerText = `Total Distance This Month: ${data.totalDistanceMonth ? (data.totalDistanceMonth).toFixed(2) : 0} feet`;
             document.getElementById(`${machine}-total-distance-quarter`).innerText = `Total Distance This Quarter: ${data.totalDistanceQuarter ? (data.totalDistanceQuarter).toFixed(2) : 0} feet`;
 
-            const percentage = data.currentSpeed ? (data.currentSpeed / 650) * 100 : 0;
-            charts[machine].data.datasets[0].data[0] = percentage; // Update the existing data point
-            charts[machine].update();
+            if (currentSpeed > 400) {
+              document.getElementById(`${machine}-fire-icon`).style.display = 'inline-block';
+            } else {
+              document.getElementById(`${machine}-fire-icon`).style.display = 'none';
+            }
           } else {
             console.log("No data available");
           }
@@ -107,7 +126,7 @@
   <h1>Real-Time Encoder Data</h1>
   <div id="17Nilpeter" class="machine-data">
     <div class="machine-title">Machine 17Nilpeter</div>
-    <div id="17Nilpeter-current-speed" class="current-speed">Current Speed: 0 feet/min</div>
+    <div id="17Nilpeter-current-speed" class="current-speed">Current Speed: 0 feet/min <span id="17Nilpeter-fire-icon" class="fire-icon" style="display: none;"></span></div>
     <canvas id="17Nilpeter-speed-percentage" class="speed-percentage"></canvas>
     <div id="17Nilpeter-total-distance" class="total-distance">Total Distance Today: 0 feet</div>
     <div id="17Nilpeter-total-distance-month" class="total-distance-month">Total Distance This Month: 0 feet</div>
