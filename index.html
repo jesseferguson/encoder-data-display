@@ -52,13 +52,13 @@
           console.log(`Data from Firebase (${machine}):`, data);
 
           if (data) {
-            document.getElementById(`${machine}-current-speed`).innerText = `Current Speed: ${data.currentSpeed ? (-data.currentSpeed).toFixed(2) : 0} feet/min`;
-            document.getElementById(`${machine}-total-distance`).innerText = `Total Distance Today: ${data.totalDistance ? (-data.totalDistance).toFixed(2) : 0} feet`;
-            document.getElementById(`${machine}-total-distance-month`).innerText = `Total Distance This Month: ${data.totalDistanceMonth ? (-data.totalDistanceMonth).toFixed(2) : 0} feet`;
-            document.getElementById(`${machine}-total-distance-quarter`).innerText = `Total Distance This Quarter: ${data.totalDistanceQuarter ? (-data.totalDistanceQuarter).toFixed(2) : 0} feet`;
+            document.getElementById(`${machine}-current-speed`).innerText = `Current Speed: ${data.currentSpeed ? (data.currentSpeed).toFixed(2) : 0} feet/min`;
+            document.getElementById(`${machine}-total-distance`).innerText = `Total Distance Today: ${data.totalDistance ? (data.totalDistance).toFixed(2) : 0} feet`;
+            document.getElementById(`${machine}-total-distance-month`).innerText = `Total Distance This Month: ${data.totalDistanceMonth ? (data.totalDistanceMonth).toFixed(2) : 0} feet`;
+            document.getElementById(`${machine}-total-distance-quarter`).innerText = `Total Distance This Quarter: ${data.totalDistanceQuarter ? (data.totalDistanceQuarter).toFixed(2) : 0} feet`;
 
             const ctx = document.getElementById(`${machine}-speed-percentage`).getContext('2d');
-            const percentage = data.currentSpeed ? (-data.currentSpeed / 650) * 100 : 0;
+            const percentage = data.currentSpeed ? (data.currentSpeed / 650) * 100 : 0;
             
             if (window[`${machine}Chart`]) {
               window[`${machine}Chart`].destroy();
