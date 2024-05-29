@@ -9,16 +9,23 @@
       margin: 0;
       padding: 20px;
     }
-    #current-speed {
+    .machine-data {
+      margin-bottom: 40px;
+    }
+    .machine-title {
+      font-size: 1.5em;
+      margin-bottom: 20px;
+    }
+    .current-speed {
       font-size: 2em;
       margin-bottom: 20px;
     }
-    #speed-percentage {
+    .speed-percentage {
       margin: 20px auto;
       width: 300px;
       height: 300px;
     }
-    #total-distance {
+    .total-distance, .total-distance-month, .total-distance-quarter {
       font-size: 1.5em;
       margin-top: 20px;
     }
@@ -27,63 +34,110 @@
   <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script>
-    // Your web app's Firebase configuration
     var firebaseConfig = {
       authDomain: "https://realtime-database-8bbe2.com",
       databaseURL: "https://realtime-database-8bbe2-default-rtdb.firebaseio.com/",
       projectId: "realtime-database-8bbe2"
     };
-    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
 
-    let chart;
+    const machines = ['17Nilpeter', 'machine2', 'machine3', 'machine4', 'machine5', 'machine6'];
 
     document.addEventListener('DOMContentLoaded', function () {
-      const dbRef = firebase.database().ref('/test');
-      
-      dbRef.on('value', (snapshot) => {
-        const data = snapshot.val();
-        console.log("Data from Firebase:", data); // Debug logging
+      machines.forEach(machine => {
+        const dbRef = firebase.database().ref(`/${machine}`);
 
-        if (data) {
-          document.getElementById('current-speed').innerText = `Current Speed: ${data.currentSpeed ? (-data.currentSpeed).toFixed(2) : 0} feet/min`;
-          document.getElementById('total-distance').innerText = `Total Distance Today: ${data.totalDistance ? (-data.totalDistance).toFixed(2) : 0} feet`;
+        dbRef.on('value', (snapshot) => {
+          const data = snapshot.val();
+          console.log(`Data from Firebase (${machine}):`, data);
 
-          const ctx = document.getElementById('speed-percentage').getContext('2d');
-          const percentage = data.currentSpeed ? (-data.currentSpeed / 650) * 100 : 0;
-          
-          if (chart) {
-            chart.destroy();
-          }
+          if (data) {
+            document.getElementById(`${machine}-current-speed`).innerText = `Current Speed: ${data.currentSpeed ? (-data.currentSpeed).toFixed(2) : 0} feet/min`;
+            document.getElementById(`${machine}-total-distance`).innerText = `Total Distance Today: ${data.totalDistance ? (-data.totalDistance).toFixed(2) : 0} feet`;
+            document.getElementById(`${machine}-total-distance-month`).innerText = `Total Distance This Month: ${data.totalDistanceMonth ? (-data.totalDistanceMonth).toFixed(2) : 0} feet`;
+            document.getElementById(`${machine}-total-distance-quarter`).innerText = `Total Distance This Quarter: ${data.totalDistanceQuarter ? (-data.totalDistanceQuarter).toFixed(2) : 0} feet`;
 
-          chart = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-              labels: ['Current Speed (%)', 'Remaining (%)'],
-              datasets: [{
-                data: [percentage, 100 - percentage],
-                backgroundColor: ['#4CAF50', '#e0e0e0'],
-                borderWidth: 1
-              }]
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false
+            const ctx = document.getElementById(`${machine}-speed-percentage`).getContext('2d');
+            const percentage = data.currentSpeed ? (-data.currentSpeed / 650) * 100 : 0;
+            
+            if (window[`${machine}Chart`]) {
+              window[`${machine}Chart`].destroy();
             }
-          });
-        } else {
-          console.log("No data available");
-        }
-      }, (error) => {
-        console.error("Error fetching data:", error); // Debug logging for errors
+
+            window[`${machine}Chart`] = new Chart(ctx, {
+              type: 'doughnut',
+              data: {
+                labels: ['Current Speed (%)', 'Remaining (%)'],
+                datasets: [{
+                  data: [percentage, 100 - percentage],
+                  backgroundColor: ['#4CAF50', '#e0e0e0'],
+                  borderWidth: 1
+                }]
+              },
+              options: {
+                responsive: true,
+                maintainAspectRatio: false
+              }
+            });
+          } else {
+            console.log("No data available");
+          }
+        }, (error) => {
+          console.error("Error fetching data:", error);
+        });
       });
     });
   </script>
 </head>
 <body>
-  <h1>17" Nilpeter Data</h1>
-  <div id="current-speed">Current Speed: 0 feet/min</div>
-  <div id="total-distance">Total Distance Today: 0 feet</div>
+  <h1>Real-Time Encoder Data</h1>
+  <div id="machine1" class="machine-data">
+    <div class="machine-title">Machine 1</div>
+    <div id="machine1-current-speed" class="current-speed">Current Speed: 0 feet/min</div>
+    <canvas id="machine1-speed-percentage" class="speed-percentage"></canvas>
+    <div id="machine1-total-distance" class="total-distance">Total Distance Today: 0 feet</div>
+    <div id="machine1-total-distance-month" class="total-distance-month">Total Distance This Month: 0 feet</div>
+    <div id="machine1-total-distance-quarter" class="total-distance-quarter">Total Distance This Quarter: 0 feet</div>
+  </div>
+  <div id="machine2" class="machine-data">
+    <div class="machine-title">Machine 2</div>
+    <div id="machine2-current-speed" class="current-speed">Current Speed: 0 feet/min</div>
+    <canvas id="machine2-speed-percentage" class="speed-percentage"></canvas>
+    <div id="machine2-total-distance" class="total-distance">Total Distance Today: 0 feet</div>
+    <div id="machine2-total-distance-month" class="total-distance-month">Total Distance This Month: 0 feet</div>
+    <div id="machine2-total-distance-quarter" class="total-distance-quarter">Total Distance This Quarter: 0 feet</div>
+  </div>
+  <div id="machine3" class="machine-data">
+    <div class="machine-title">Machine 3</div>
+    <div id="machine3-current-speed" class="current-speed">Current Speed: 0 feet/min</div>
+    <canvas id="machine3-speed-percentage" class="speed-percentage"></canvas>
+    <div id="machine3-total-distance" class="total-distance">Total Distance Today: 0 feet</div>
+    <div id="machine3-total-distance-month" class="total-distance-month">Total Distance This Month: 0 feet</div>
+    <div id="machine3-total-distance-quarter" class="total-distance-quarter">Total Distance This Quarter: 0 feet</div>
+  </div>
+  <div id="machine4" class="machine-data">
+    <div class="machine-title">Machine 4</div>
+    <div id="machine4-current-speed" class="current-speed">Current Speed: 0 feet/min</div>
+    <canvas id="machine4-speed-percentage" class="speed-percentage"></canvas>
+    <div id="machine4-total-distance" class="total-distance">Total Distance Today: 0 feet</div>
+    <div id="machine4-total-distance-month" class="total-distance-month">Total Distance This Month: 0 feet</div>
+    <div id="machine4-total-distance-quarter" class="total-distance-quarter">Total Distance This Quarter: 0 feet</div>
+  </div>
+  <div id="machine5" class="machine-data">
+    <div class="machine-title">Machine 5</div>
+    <div id="machine5-current-speed" class="current-speed">Current Speed: 0 feet/min</div>
+    <canvas id="machine5-speed-percentage" class="speed-percentage"></canvas>
+    <div id="machine5-total-distance" class="total-distance">Total Distance Today: 0 feet</div>
+    <div id="machine5-total-distance-month" class="total-distance-month">Total Distance This Month: 0 feet</div>
+    <div id="machine5-total-distance-quarter" class="total-distance-quarter">Total Distance This Quarter: 0 feet</div>
+  </div>
+  <div id="machine6" class="machine-data">
+    <div class="machine-title">Machine 6</div>
+    <div id="machine6-current-speed" class="current-speed">Current Speed: 0 feet/min</div>
+    <canvas id="machine6-speed-percentage" class="speed-percentage"></canvas>
+    <div id="machine6-total-distance" class="total-distance">Total Distance Today: 0 feet</div>
+    <div id="machine6-total-distance-month" class="total-distance-month">Total Distance This Month: 0 feet</div>
+    <div id="machine6-total-distance-quarter" class="total-distance-quarter">Total Distance This Quarter: 0 feet</div>
+  </div>
 </body>
 </html>
-
