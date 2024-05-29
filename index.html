@@ -46,6 +46,7 @@
     firebase.initializeApp(firebaseConfig);
 
     const machines = ['17Nilpeter'];
+    const charts = {};
 
     document.addEventListener('DOMContentLoaded', function () {
       machines.forEach(machine => {
@@ -64,11 +65,11 @@
             const ctx = document.getElementById(`${machine}-speed-percentage`).getContext('2d');
             const percentage = data.currentSpeed ? (-data.currentSpeed / 650) * 100 : 0;
             
-            if (window[`${machine}Chart`]) {
-              window[`${machine}Chart`].destroy();
+            if (charts[machine]) {
+              charts[machine].destroy();
             }
 
-            window[`${machine}Chart`] = new Chart(ctx, {
+            charts[machine] = new Chart(ctx, {
               type: 'doughnut',
               data: {
                 labels: ['Current Speed (%)', 'Remaining (%)'],
