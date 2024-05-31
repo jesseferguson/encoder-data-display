@@ -1,56 +1,35 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Real-Time Encoder Data</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin: 0;
-      padding: 5px;
-      overflow: hidden; /* Prevent scrolling */
-    }
-    .machine-data {
-      margin-bottom: 5px;
-    }
-    .machine-title {
-      font-size: 1em;
-      margin-bottom: 5px;
-    }
-    .current-speed {
-      font-size: 2em;
-      margin-bottom: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .speed-percentage {
-      margin: 20px auto;
-      width: 100px; /* Fixed width */
-      height: 300px; /* Fixed height */
-      max-width: 100px; /* Fixed max-width */
-      max-height: 300px; /* Fixed max-height */
-    }
-    .total-distance, .total-distance-month, .total-distance-quarter {
-      font-size: 1.5em;
-      margin-top: 20px;
-    }
-    .fire-icon {
-      width: 350px;
-      height: 350px;
-      display: none;
-      background: url('https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExY3BqMXdyZjVkbDlxcWwyNnNzMzIzaHhjY2swbzF5Zm42dWhjeHprdCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/xT5LMOvzyqSyIGqlsk/giphy.gif') no-repeat center center;
-      background-size: contain;
-    }
-    img {
-            width: 100px;
-            height: auto;
-        }
-  </style>
-  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/8.6.8/firebase-database.js"></script>
+  <title>Realtime Data Chart</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+</head>
+<body>
+  <h3>Realtime Data Chart</h3>
+
+  <select id="timeRange">
+    <option value="hour">Last Hour</option>
+    <option value="day">Last Day</option>
+    <option value="week">Last Week</option>
+    <option value="month">Last Month</option>
+  </select>
+  <canvas id="dataChart"></canvas>
+  
+  <div>
+    <h2>Current Press Speed: <span id="currentSpeed">0</span></h2>
+    <h2>Total Distance: <span id="totalDistance">0</span></h2>
+    <h2>Total Distance This Month: <span id="totalDistanceMonth">0</span></h2>
+    <h2>Total Distance This Quarter: <span id="totalDistanceQuarter">0</span></h2>
+  </div>
+
+  
+
   <script>
+    // Your web app's Firebase configuration
     var firebaseConfig = {
       apiKey: "YOUR_API_KEY",
       authDomain: "realtime-database-8bbe2.com",
@@ -60,81 +39,115 @@
       messagingSenderId: "YOUR_SENDER_ID",
       appId: "YOUR_APP_ID"
     };
+    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
 
-    const machines = ['17Nilpeter'];
-    const charts = {};
+    // Reference to your hourly data
+    var hourlyDataRef = firebase.database().ref('17Nilpeter_hourlyData');
+    var currentSpeedRef = firebase.database().ref('17Nilpeter/currentSpeed');
+    var totalDistanceRef = firebase.database().ref('17Nilpeter/totalDistance');
+    var totalDistanceMonthRef = firebase.database().ref('17Nilpeter/totalDistanceMonth');
+    var totalDistanceQuarterRef = firebase.database().ref('17Nilpeter/totalDistanceQuarter');
 
-    document.addEventListener('DOMContentLoaded', function () {
-      machines.forEach(machine => {
-        const dbRef = firebase.database().ref(`/${machine}`);
-        const ctx = document.getElementById(`${machine}-speed-percentage`).getContext('2d');
-
-        charts[machine] = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: ['Speed Percentage'],
-            datasets: [{
-              label: 'Speed %',
-              data: [0],
-              backgroundColor: ['#4CAF50'],
-              borderColor: ['#4CAF50'],
-              borderWidth: 1
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-              y: {
-                beginAtZero: true,
-                max: 100
-              }
+    // Initialize Chart
+    var ctx = document.getElementById('dataChart').getContext('2d');
+    var dataChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Minute Distance',
+          data: [],
+          borderColor: 'rgba(75, 192, 192, 1)',
+          borderWidth: 1,
+          fill: false
+        }]
+      },
+      options: {
+        scales: {
+          x: {
+            type: 'time',
+            time: {
+              unit: 'minute'
             }
           }
-        });
+        }
+      }
+    });
 
-        dbRef.on('value', (snapshot) => {
-          const data = snapshot.val();
-          console.log(`Data from Firebase (${machine}):`, data);
-
-          if (data) {
-            const currentSpeed = data.currentSpeed ? data.currentSpeed : 0;
-            const percentage = (currentSpeed / 650) * 100;
-            const backgroundColor = percentage < 15 ? '#FF0000' :
-                                    percentage < 35 ? '#FFA500' : '#4CAF50';
-
-            charts[machine].data.datasets[0].data[0] = percentage;
-            charts[machine].data.datasets[0].backgroundColor[0] = backgroundColor;
-            charts[machine].update();
-
-            document.getElementById(`${machine}-current-speed`).innerHTML = ` ${currentSpeed.toFixed(2)} feet/min <span id="${machine}-fire-icon" class="fire-icon"></span>`;
-            if (currentSpeed > 250) {
-              document.getElementById(`${machine}-fire-icon`).style.display = 'inline-block';
-            } else {
-              document.getElementById(`${machine}-fire-icon`).style.display = 'none';
-            }
-            document.getElementById(`${machine}-total-distance`).innerText = `Total Distance Today: ${data.totalDistance ? (data.totalDistance).toFixed(2) : 0} feet`;
-            document.getElementById(`${machine}-total-distance-month`).innerText = `Total Distance This Month: ${data.totalDistanceMonth ? (data.totalDistanceMonth).toFixed(2) : 0} feet`;
-            document.getElementById(`${machine}-total-distance-quarter`).innerText = `Total Distance This Quarter: ${data.totalDistanceQuarter ? (data.totalDistanceQuarter).toFixed(2) : 0} feet`;
-          } else {
-            console.log("No data available");
-          }
-        }, (error) => {
-          console.error("Error fetching data:", error);
-        });
+    function updateChart(snapshot, cutoff) {
+      var labels = [];
+      var data = [];
+      snapshot.forEach(function(childSnapshot) {
+        var dataPoint = childSnapshot.val();
+        var timestamp = new Date(dataPoint.timestamp);
+        if (timestamp >= cutoff) {
+          labels.push(timestamp);
+          data.push(dataPoint.minuteDistance);
+        }
       });
+      dataChart.data.labels = labels;
+      dataChart.data.datasets[0].data = data;
+      dataChart.update();
+    }
+
+    function fetchData(timeRange) {
+      var now = new Date();
+      var cutoff = new Date();
+      switch (timeRange) {
+        case 'hour':
+          cutoff.setHours(now.getHours() - 1);
+          break;
+        case 'day':
+          cutoff.setDate(now.getDate() - 1);
+          break;
+        case 'week':
+          cutoff.setDate(now.getDate() - 7);
+          break;
+        case 'month':
+          cutoff.setMonth(now.getMonth() - 1);
+          break;
+      }
+
+      hourlyDataRef.on('value', function(snapshot) {
+        updateChart(snapshot, cutoff);
+      });
+
+      currentSpeedRef.on('value', function(snapshot) {
+        var currentSpeed = snapshot.val();
+        $('#currentSpeed').text(formatNumber(currentSpeed));
+        if (currentSpeed > 30) {
+          $('#speedAlert').show();
+        } else {
+          $('#speedAlert').hide();
+        }
+      });
+
+      totalDistanceRef.on('value', function(snapshot) {
+        $('#totalDistance').text(formatNumber(snapshot.val()));
+      });
+
+      totalDistanceMonthRef.on('value', function(snapshot) {
+        $('#totalDistanceMonth').text(formatNumber(snapshot.val()));
+      });
+
+      totalDistanceQuarterRef.on('value', function(snapshot) {
+        $('#totalDistanceQuarter').text(formatNumber(snapshot.val()));
+      });
+    }
+
+    function formatNumber(num) {
+      return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+
+    // Fetch data on page load and update on time range change
+    $(document).ready(function() {
+      $('#timeRange').change(function() {
+        fetchData(this.value);
+      });
+      fetchData('hour'); // Default to last hour
     });
   </script>
-</head>
-<body>
-  <div id="17Nilpeter" class="machine-data">
-    <div class="machine-title">Machine 17Nilpeter</div>
-    <div id="17Nilpeter-current-speed" class="current-speed"> 0 feet/min <span id="17Nilpeter-fire-icon" class="fire-icon" style="display: none;"></span></div>
-    <canvas id="17Nilpeter-speed-percentage" class="speed-percentage"></canvas>
-    <div id="17Nilpeter-total-distance" class="total-distance">Total Distance Today: 0 feet</div>
-    <div id="17Nilpeter-total-distance-month" class="total-distance-month">Total Distance This Month: 0 feet</div>
-    <div id="17Nilpeter-total-distance-quarter" class="total-distance-quarter">Total Distance This Quarter: 0 feet</div>
-  </div>
 </body>
 </html>
+
