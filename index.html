@@ -14,12 +14,22 @@
       height: auto;
     }
     #dataDisplay {
-      position: absolute;
-      top: 20px;
-      left: 5px;
+      display: flex;
+      justify-content: space-around;
+      margin-top: 20px;
+    }
+    .dataBlock {
+      text-align: center;
+    }
+    .dataBlock h2 {
+      margin: 0;
+    }
+    .dataBlock .speed {
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 24px;
     }
     #options {
-      margin-top: 175px;
+      margin-top: 20px;
     }
   </style>
 </head>
@@ -39,10 +49,21 @@
   <canvas id="dataChart"></canvas>
   
   <div id="dataDisplay">
-    <h2>Current Press Speed: <span id="currentSpeed">0</span></h2>
-    <h2>Total Distance: <span id="totalDistance">0</span></h2>
-    <h2>Total Distance This Month: <span id="totalDistanceMonth">0</span></h2>
-    <h2>Total Distance This Quarter: <span id="totalDistanceQuarter">0</span></h2>
+    <div class="dataBlock">
+      <h2>17Nilpeter</h2>
+      <div class="speed">Current Press Speed: <span id="currentSpeed">0</span></div>
+      <div>Total Distance: <span id="totalDistance">0</span></div>
+    </div>
+    <div class="dataBlock">
+      <h2>ETI</h2>
+      <div class="speed">Current Press Speed: <span id="currentSpeedETI">0</span></div>
+      <div>Total Distance: <span id="totalDistanceETI">0</span></div>
+    </div>
+    <div class="dataBlock">
+      <h2>18AZT</h2>
+      <div class="speed">Current Press Speed: <span id="currentSpeedAZT">0</span></div>
+      <div>Total Distance: <span id="totalDistanceAZT">0</span></div>
+    </div>
   </div>
 
   <div id="speedAlert" style="display: none;">
@@ -63,12 +84,16 @@
     // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
 
-    // Reference to your hourly data
+    // References to your data
     var hourlyDataRef = firebase.database().ref('17Nilpeter_hourlyData');
+    var hourlyDataETIRef = firebase.database().ref('ETI_hourlyData');
+    var hourlyDataAZTRef = firebase.database().ref('18AZT_hourlyData');
     var currentSpeedRef = firebase.database().ref('17Nilpeter/currentSpeed');
+    var currentSpeedETIRef = firebase.database().ref('ETI/currentSpeed');
+    var currentSpeedAZTRef = firebase.database().ref('18AZT/currentSpeed');
     var totalDistanceRef = firebase.database().ref('17Nilpeter/totalDistance');
-    var totalDistanceMonthRef = firebase.database().ref('17Nilpeter/totalDistanceMonth');
-    var totalDistanceQuarterRef = firebase.database().ref('17Nilpeter/totalDistanceQuarter');
+    var totalDistanceETIRef = firebase.database().ref('ETI/totalDistance');
+    var totalDistanceAZTRef = firebase.database().ref('18AZT/totalDistance');
 
     var noiseReduction = false;
 
@@ -78,13 +103,29 @@
       type: 'line',
       data: {
         labels: [],
-        datasets: [{
-          label: 'Minute Distance',
-          data: [],
-          borderColor: 'rgba(75, 192, 192, 1)',
-          borderWidth: 1,
-          fill: false
-        }]
+        datasets: [
+          {
+            label: 'Minute Distance (17Nilpeter)',
+            data: [],
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1,
+            fill: false
+          },
+          {
+            label: 'Minute Distance (ETI)',
+            data: [],
+            borderColor: 'rgba(192, 75, 192, 1)',
+            borderWidth: 1,
+            fill: false
+          },
+          {
+            label: 'Minute Distance (18AZT)',
+            data: [],
+            borderColor: 'rgba(75, 75, 192, 1)',
+            borderWidth: 1,
+            fill: false
+          }
+        ]
       },
       options: {
         scales: {
@@ -98,24 +139,51 @@
       }
     });
 
-    function updateChart(snapshot, cutoff) {
+    function updateChart(snapshot17Nilpeter, snapshotETI, snapshotAZT, cutoff) {
       var labels = [];
-      var data = [];
-      snapshot.forEach(function(childSnapshot) {
+      var data17Nilpeter = [];
+      var dataETI = [];
+      var dataAZT = [];
+
+      snapshot17Nilpeter.forEach(function(childSnapshot) {
         var dataPoint = childSnapshot.val();
         var timestamp = new Date(dataPoint.timestamp);
         if (timestamp >= cutoff) {
-          labels.push(convertUTCToLocalTime(timestamp));
-          data.push(dataPoint.minuteDistance);
+          var localTime = convertUTCToLocalTime(timestamp);
+          data17Nilpeter.push({ x: localTime, y: dataPoint.minuteDistance });
         }
       });
 
+      snapshotETI.forEach(function(childSnapshot) {
+        var dataPoint = childSnapshot.val();
+        var timestamp = new Date(dataPoint.timestamp);
+        if (timestamp >= cutoff) {
+          var localTime = convertUTCToLocalTime(timestamp);
+          dataETI.push({ x: localTime, y: dataPoint.minuteDistance });
+        }
+      });
+
+      snapshotAZT.forEach(function(childSnapshot) {
+        var dataPoint = childSnapshot.val();
+        var timestamp = new Date(dataPoint.timestamp);
+        if (timestamp >= cutoff) {
+          var localTime = convertUTCToLocalTime(timestamp);
+          dataAZT.push({ x: localTime, y: dataPoint.minuteDistance });
+        }
+      });
+
+      labels = [...new Set(data17Nilpeter.map(dp => dp.x).concat(dataETI.map(dp => dp.x), dataAZT.map(dp => dp.x)))].sort((a, b) => a - b);
+
       if (noiseReduction) {
-        data = reduceNoise(data);
+        data17Nilpeter = reduceNoise(data17Nilpeter);
+        dataETI = reduceNoise(dataETI);
+        dataAZT = reduceNoise(dataAZT);
       }
 
       dataChart.data.labels = labels;
-      dataChart.data.datasets[0].data = data;
+      dataChart.data.datasets[0].data = data17Nilpeter;
+      dataChart.data.datasets[1].data = dataETI;
+      dataChart.data.datasets[2].data = dataAZT;
       dataChart.update();
     }
 
@@ -129,10 +197,10 @@
         var sum = 0;
 
         for (var j = start; j < end; j++) {
-          sum += data[j];
+          sum += data[j].y;
         }
 
-        smoothedData.push(sum / (end - start));
+        smoothedData.push({ x: data[i].x, y: sum / (end - start) });
       }
 
       return smoothedData;
@@ -160,13 +228,27 @@
           break;
       }
 
-      hourlyDataRef.once('value', function(snapshot) {
-        if (snapshot.exists()) {
-          updateChart(snapshot, cutoff);
+      console.log("Cutoff date: ", cutoff);
+
+      Promise.all([
+        hourlyDataRef.once('value'),
+        hourlyDataETIRef.once('value'),
+        hourlyDataAZTRef.once('value')
+      ]).then(function([snapshot17Nilpeter, snapshotETI, snapshotAZT]) {
+        if (snapshot17Nilpeter.exists() && snapshotETI.exists() && snapshotAZT.exists()) {
+          updateChart(snapshot17Nilpeter, snapshotETI, snapshotAZT, cutoff);
         } else {
-          console.error("No data available.");
+          if (!snapshot17Nilpeter.exists()) {
+            console.error("No data available for 17Nilpeter.");
+          }
+          if (!snapshotETI.exists()) {
+            console.error("No data available for ETI.");
+          }
+          if (!snapshotAZT.exists()) {
+            console.error("No data available for 18AZT.");
+          }
         }
-      }, function(error) {
+      }).catch(function(error) {
         console.error("Error fetching data: ", error);
       });
 
@@ -186,6 +268,28 @@
         console.error("Error fetching current speed: ", error);
       });
 
+      currentSpeedETIRef.once('value', function(snapshot) {
+        if (snapshot.exists()) {
+          var currentSpeedETI = snapshot.val();
+          $('#currentSpeedETI').text(formatNumber(currentSpeedETI));
+        } else {
+          console.error("No current speed data available for ETI.");
+        }
+      }, function(error) {
+        console.error("Error fetching current speed for ETI: ", error);
+      });
+
+      currentSpeedAZTRef.once('value', function(snapshot) {
+        if (snapshot.exists()) {
+          var currentSpeedAZT = snapshot.val();
+          $('#currentSpeedAZT').text(formatNumber(currentSpeedAZT));
+        } else {
+          console.error("No current speed data available for AZT.");
+        }
+      }, function(error) {
+        console.error("Error fetching current speed for AZT: ", error);
+      });
+
       totalDistanceRef.once('value', function(snapshot) {
         if (snapshot.exists()) {
           $('#totalDistance').text(formatNumber(snapshot.val()));
@@ -196,24 +300,24 @@
         console.error("Error fetching total distance: ", error);
       });
 
-      totalDistanceMonthRef.once('value', function(snapshot) {
+      totalDistanceETIRef.once('value', function(snapshot) {
         if (snapshot.exists()) {
-          $('#totalDistanceMonth').text(formatNumber(snapshot.val()));
+          $('#totalDistanceETI').text(formatNumber(snapshot.val()));
         } else {
-          console.error("No total distance for the month data available.");
+          console.error("No total distance data available for ETI.");
         }
       }, function(error) {
-        console.error("Error fetching total distance for the month: ", error);
+        console.error("Error fetching total distance for ETI: ", error);
       });
 
-      totalDistanceQuarterRef.once('value', function(snapshot) {
+      totalDistanceAZTRef.once('value', function(snapshot) {
         if (snapshot.exists()) {
-          $('#totalDistanceQuarter').text(formatNumber(snapshot.val()));
+          $('#totalDistanceAZT').text(formatNumber(snapshot.val()));
         } else {
-          console.error("No total distance for the quarter data available.");
+          console.error("No total distance data available for AZT.");
         }
       }, function(error) {
-        console.error("Error fetching total distance for the quarter: ", error);
+        console.error("Error fetching total distance for AZT: ", error);
       });
     }
 
@@ -221,7 +325,62 @@
       return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
     }
 
-    // Fetch data on page load and update on time range change
+    function listenForRealtimeUpdates() {
+      hourlyDataRef.on('child_added', function(snapshot) {
+        fetchData($('#timeRange').val());
+      });
+      hourlyDataETIRef.on('child_added', function(snapshot) {
+        fetchData($('#timeRange').val());
+      });
+      hourlyDataAZTRef.on('child_added', function(snapshot) {
+        fetchData($('#timeRange').val());
+      });
+
+      currentSpeedRef.on('value', function(snapshot) {
+        if (snapshot.exists()) {
+          var currentSpeed = snapshot.val();
+          $('#currentSpeed').text(formatNumber(currentSpeed));
+          if (currentSpeed > 350) {
+            $('#speedAlert').show();
+          } else {
+            $('#speedAlert').hide();
+          }
+        }
+      });
+
+      currentSpeedETIRef.on('value', function(snapshot) {
+        if (snapshot.exists()) {
+          var currentSpeedETI = snapshot.val();
+          $('#currentSpeedETI').text(formatNumber(currentSpeedETI));
+        }
+      });
+
+      currentSpeedAZTRef.on('value', function(snapshot) {
+        if (snapshot.exists()) {
+          var currentSpeedAZT = snapshot.val();
+          $('#currentSpeedAZT').text(formatNumber(currentSpeedAZT));
+        }
+      });
+
+      totalDistanceRef.on('value', function(snapshot) {
+        if (snapshot.exists()) {
+          $('#totalDistance').text(formatNumber(snapshot.val()));
+        }
+      });
+
+      totalDistanceETIRef.on('value', function(snapshot) {
+        if (snapshot.exists()) {
+          $('#totalDistanceETI').text(formatNumber(snapshot.val()));
+        }
+      });
+
+      totalDistanceAZTRef.on('value', function(snapshot) {
+        if (snapshot.exists()) {
+          $('#totalDistanceAZT').text(formatNumber(snapshot.val()));
+        }
+      });
+    }
+
     $(document).ready(function() {
       $('#timeRange').change(function() {
         fetchData(this.value);
@@ -234,6 +393,7 @@
         fetchData($('#timeRange').val());
       });
       fetchData('hour'); // Default to last hour
+      listenForRealtimeUpdates(); // Listen for real-time updates
     });
   </script>
 </body>
