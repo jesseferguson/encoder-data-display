@@ -13,19 +13,75 @@
       width: 70%;
       height: auto;
     }
+    #dataDisplay {
+      display: flex;
+      justify-content: space-around;
+      margin-top: 20px;
+    }
+    .dataBlock {
+      text-align: center;
+    }
+    .dataBlock h2 {
+      margin: 0;
+    }
+    .dataBlock .speed {
+      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+      font-size: 24px;
+    }
+    #options {
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
   <h3>Realtime Data Chart</h3>
+
+  <div id="options">
+    <select id="timeRange">
+      <option value="hour">Last Hour</option>
+      <option value="day">Last Day</option>
+      <option value="week">Last Week</option>
+      <option value="month">Last Month</option>
+    </select>
+    <button id="refreshButton">Refresh Data</button>
+    <button id="toggleNoiseButton">Toggle Noise Reduction</button>
+  </div>
   <canvas id="dataChart"></canvas>
+  
+  <div id="dataDisplay">
+    <div class="dataBlock">
+      <h2>17Nilpeter</h2>
+      <div class="speed">Current Press Speed: <span id="currentSpeed">0</span></div>
+      <div>Total Distance: <span id="totalDistance">0</span></div>
+    </div>
+    <div class="dataBlock">
+      <h2>ETI</h2>
+      <div class="speed">Current Press Speed: <span id="currentSpeedETI">0</span></div>
+      <div>Total Distance: <span id="totalDistanceETI">0</span></div>
+    </div>
+    <div class="dataBlock">
+      <h2>18AZT</h2>
+      <div class="speed">Current Press Speed: <span id="currentSpeedAZT">0</span></div>
+      <div>Total Distance: <span id="totalDistanceAZT">0</span></div>
+    </div>
+    <div class="dataBlock">
+      <h2>13Nilpeter</h2>
+      <div class="speed">Current Press Speed: <span id="currentSpeed13Nilpeter">0</span></div>
+      <div>Total Distance: <span id="totalDistance13Nilpeter">0</span></div>
+    </div>
+  </div>
+
+  <div id="speedAlert" style="display: none;">
+    <img src="https://example.com/alert.gif" alt="Speed Alert" />
+  </div>
 
   <script>
     // Your web app's Firebase configuration
     var firebaseConfig = {
       apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      databaseURL: "https://YOUR_PROJECT_ID.firebaseio.com",
-      projectId: "YOUR_PROJECT_ID",
+      authDomain: "realtime-database-8bbe2.com",
+      databaseURL: "https://realtime-database-8bbe2-default-rtdb.firebaseio.com",
+      projectId: "realtime-database-8bbe2",
       storageBucket: "YOUR_PROJECT_ID.appspot.com",
       messagingSenderId: "YOUR_SENDER_ID",
       appId: "YOUR_APP_ID"
@@ -34,7 +90,20 @@
     firebase.initializeApp(firebaseConfig);
 
     // References to your data
-    var hourlyDataRef = firebase.database().ref('hourlyData');
+    var hourlyDataRef = firebase.database().ref('17Nilpeter_hourlyData');
+    var hourlyDataETIRef = firebase.database().ref('ETI_hourlyData');
+    var hourlyDataAZTRef = firebase.database().ref('18AZT_hourlyData');
+    var hourlyData13NilpeterRef = firebase.database().ref('13Nilpeter_hourlyData');
+    var currentSpeedRef = firebase.database().ref('17Nilpeter/currentSpeed');
+    var currentSpeedETIRef = firebase.database().ref('ETI/currentSpeed');
+    var currentSpeedAZTRef = firebase.database().ref('18AZT/currentSpeed');
+    var currentSpeed13NilpeterRef = firebase.database().ref('13Nilpeter/currentSpeed');
+    var totalDistanceRef = firebase.database().ref('17Nilpeter/totalDistance');
+    var totalDistanceETIRef = firebase.database().ref('ETI/totalDistance');
+    var totalDistanceAZTRef = firebase.database().ref('18AZT/totalDistance');
+    var totalDistance13NilpeterRef = firebase.database().ref('13Nilpeter/totalDistance');
+
+    var noiseReduction = false;
 
     // Initialize Chart
     var ctx = document.getElementById('dataChart').getContext('2d');
@@ -42,63 +111,347 @@
       type: 'line',
       data: {
         labels: [],
-        datasets: [{
-          label: 'Hourly Data',
-          data: [],
-          borderColor: 'rgba(75, 192, 192, 1)',
-          borderWidth: 1,
-          fill: false
-        }]
+        datasets: [
+          {
+            label: 'Minute Distance (17Nilpeter)',
+            data: [],
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1,
+            fill: false
+          },
+          {
+            label: 'Minute Distance (ETI)',
+            data: [],
+            borderColor: 'rgba(192, 75, 192, 1)',
+            borderWidth: 1,
+            fill: false
+          },
+          {
+            label: 'Minute Distance (18AZT)',
+            data: [],
+            borderColor: 'rgba(75, 75, 192, 1)',
+            borderWidth: 1,
+            fill: false
+          },
+          {
+            label: 'Minute Distance (13Nilpeter)',
+            data: [],
+            borderColor: 'rgba(192, 192, 75, 1)',
+            borderWidth: 1,
+            fill: false
+          }
+        ]
       },
       options: {
         scales: {
           x: {
             type: 'time',
             time: {
-              unit: 'hour'
+              unit: 'minute'
             }
           }
         }
       }
     });
 
-    function fetchData() {
+    function updateChart(snapshot17Nilpeter, snapshotETI, snapshotAZT, snapshot13Nilpeter, cutoff) {
+      var labels = [];
+      var data17Nilpeter = [];
+      var dataETI = [];
+      var dataAZT = [];
+      var data13Nilpeter = [];
+
+      snapshot17Nilpeter.forEach(function(childSnapshot) {
+        var dataPoint = childSnapshot.val();
+        var timestamp = new Date(dataPoint.timestamp);
+        if (timestamp >= cutoff) {
+          var localTime = convertUTCToLocalTime(timestamp);
+          data17Nilpeter.push({ x: localTime, y: dataPoint.minuteDistance });
+        }
+      });
+
+      snapshotETI.forEach(function(childSnapshot) {
+        var dataPoint = childSnapshot.val();
+        var timestamp = new Date(dataPoint.timestamp);
+        if (timestamp >= cutoff) {
+          var localTime = convertUTCToLocalTime(timestamp);
+          dataETI.push({ x: localTime, y: dataPoint.minuteDistance });
+        }
+      });
+
+      snapshotAZT.forEach(function(childSnapshot) {
+        var dataPoint = childSnapshot.val();
+        var timestamp = new Date(dataPoint.timestamp);
+        if (timestamp >= cutoff) {
+          var localTime = convertUTCToLocalTime(timestamp);
+          dataAZT.push({ x: localTime, y: dataPoint.minuteDistance });
+        }
+      });
+
+      snapshot13Nilpeter.forEach(function(childSnapshot) {
+        var dataPoint = childSnapshot.val();
+        var timestamp = new Date(dataPoint.timestamp);
+        if (timestamp >= cutoff) {
+          var localTime = convertUTCToLocalTime(timestamp);
+          data13Nilpeter.push({ x: localTime, y: dataPoint.minuteDistance });
+        }
+      });
+
+      labels = [...new Set(data17Nilpeter.map(dp => dp.x).concat(dataETI.map(dp => dp.x), dataAZT.map(dp => dp.x), data13Nilpeter.map(dp => dp.x)))].sort((a, b) => a - b);
+
+      if (noiseReduction) {
+        data17Nilpeter = reduceNoise(data17Nilpeter);
+        dataETI = reduceNoise(dataETI);
+        dataAZT = reduceNoise(dataAZT);
+        data13Nilpeter = reduceNoise(data13Nilpeter);
+      }
+
+      dataChart.data.labels = labels;
+      dataChart.data.datasets[0].data = data17Nilpeter;
+      dataChart.data.datasets[1].data = dataETI;
+      dataChart.data.datasets[2].data = dataAZT;
+      dataChart.data.datasets[3].data = data13Nilpeter;
+      dataChart.update();
+    }
+
+    function reduceNoise(data) {
+      var smoothedData = [];
+      var windowSize = 5; // Change this to adjust the smoothing effect
+
+      for (var i = 0; i < data.length; i++) {
+        var start = Math.max(0, i - Math.floor(windowSize / 2));
+        var end = Math.min(data.length, i + Math.floor(windowSize / 2) + 1);
+        var sum = 0;
+
+        for (var j = start; j < end; j++) {
+          sum += data[j].y;
+        }
+
+        smoothedData.push({ x: data[i].x, y: sum / (end - start) });
+      }
+
+      return smoothedData;
+    }
+
+    function convertUTCToLocalTime(date) {
+      return new Date(date.getTime() - date.getTimezoneOffset() * 60000);
+    }
+
+    function fetchData(timeRange) {
+      var now = new Date();
       var cutoff = new Date();
-      cutoff.setHours(cutoff.getHours() - 24); // Show data for the last 24 hours
-      console.log("Cutoff timestamp: ", cutoff.getTime());
+      if (timeRange === 'hour') {
+        cutoff.setHours(now.getHours() - 1);
+      }
 
-      hourlyDataRef.orderByChild('timestamp').startAt(cutoff.getTime()).on('value', function(snapshot) {
-        var labels = [];
-        var data = [];
-        
-        snapshot.forEach(function(childSnapshot) {
-          var dataPoint = childSnapshot.val();
-          var timestamp = new Date(dataPoint.timestamp);
+      console.log("Cutoff date: ", cutoff);
 
-          // Log each data point for debugging
-          console.log("Data point:", dataPoint);
-
-          // Verify that the timestamp and value fields exist
-          if (dataPoint.timestamp && dataPoint.value !== undefined) {
-            labels.push(timestamp);
-            data.push(dataPoint.value);
-          } else {
-            console.error("Invalid data point:", dataPoint);
+      Promise.all([
+        hourlyDataRef.once('value'),
+        hourlyDataETIRef.once('value'),
+        hourlyDataAZTRef.once('value'),
+        hourlyData13NilpeterRef.once('value')
+      ]).then(function([snapshot17Nilpeter, snapshotETI, snapshotAZT, snapshot13Nilpeter]) {
+        if (snapshot17Nilpeter.exists() && snapshotETI.exists() && snapshotAZT.exists() && snapshot13Nilpeter.exists()) {
+          updateChart(snapshot17Nilpeter, snapshotETI, snapshotAZT, snapshot13Nilpeter, cutoff);
+        } else {
+          if (!snapshot17Nilpeter.exists()) {
+            console.error("No data available for 17Nilpeter.");
           }
-        });
+          if (!snapshotETI.exists()) {
+            console.error("No data available for ETI.");
+          }
+          if (!snapshotAZT.exists()) {
+            console.error("No data available for 18AZT.");
+          }
+          if (!snapshot13Nilpeter.exists()) {
+            console.error("No data available for 13Nilpeter.");
+          }
+        }
+      }).catch(function(error) {
+        console.error("Error fetching data: ", error);
+      });
 
-        console.log("Labels:", labels);
-        console.log("Data:", data);
-
-        dataChart.data.labels = labels;
-        dataChart.data.datasets[0].data = data;
-        dataChart.update();
+      currentSpeedRef.once('value', function(snapshot) {
+        if (snapshot.exists()) {
+          var currentSpeed = snapshot.val();
+          $('#currentSpeed').text(formatNumber(currentSpeed));
+          if (currentSpeed > 350) {
+            $('#speedAlert').show();
+          } else {
+            $('#speedAlert').hide();
+          }
+        } else {
+          console.error("No current speed data available.");
+        }
       }, function(error) {
-        console.error("Error fetching data:", error);
+        console.error("Error fetching current speed: ", error);
+      });
+
+      currentSpeedETIRef.once('value', function(snapshot) {
+        if (snapshot.exists()) {
+          var currentSpeedETI = snapshot.val();
+          $('#currentSpeedETI').text(formatNumber(currentSpeedETI));
+        } else {
+          console.error("No current speed data available for ETI.");
+        }
+      }, function(error) {
+        console.error("Error fetching current speed for ETI: ", error);
+      });
+
+      currentSpeedAZTRef.once('value', function(snapshot) {
+        if (snapshot.exists()) {
+          var currentSpeedAZT = snapshot.val();
+          $('#currentSpeedAZT').text(formatNumber(currentSpeedAZT));
+        } else {
+          console.error("No current speed data available for AZT.");
+        }
+      }, function(error) {
+        console.error("Error fetching current speed for AZT: ", error);
+      });
+
+      currentSpeed13NilpeterRef.once('value', function(snapshot) {
+        if (snapshot.exists()) {
+          var currentSpeed13Nilpeter = snapshot.val();
+          $('#currentSpeed13Nilpeter').text(formatNumber(currentSpeed13Nilpeter));
+        } else {
+          console.error("No current speed data available for 13Nilpeter.");
+        }
+      }, function(error) {
+        console.error("Error fetching current speed for 13Nilpeter: ", error);
+      });
+
+      totalDistanceRef.once('value', function(snapshot) {
+        if (snapshot.exists()) {
+          $('#totalDistance').text(formatNumber(snapshot.val()));
+        } else {
+          console.error("No total distance data available.");
+        }
+      }, function(error) {
+        console.error("Error fetching total distance: ", error);
+      });
+
+      totalDistanceETIRef.once('value', function(snapshot) {
+        if (snapshot.exists()) {
+          $('#totalDistanceETI').text(formatNumber(snapshot.val()));
+        } else {
+          console.error("No total distance data available for ETI.");
+        }
+      }, function(error) {
+        console.error("Error fetching total distance for ETI: ", error);
+      });
+
+      totalDistanceAZTRef.once('value', function(snapshot) {
+        if (snapshot.exists()) {
+          $('#totalDistanceAZT').text(formatNumber(snapshot.val()));
+        } else {
+          console.error("No total distance data available for AZT.");
+        }
+      }, function(error) {
+        console.error("Error fetching total distance for AZT: ", error);
+      });
+
+      totalDistance13NilpeterRef.once('value', function(snapshot) {
+        if (snapshot.exists()) {
+          $('#totalDistance13Nilpeter').text(formatNumber(snapshot.val()));
+        } else {
+          console.error("No total distance data available for 13Nilpeter.");
+        }
+      }, function(error) {
+        console.error("Error fetching total distance for 13Nilpeter: ", error);
       });
     }
 
-    fetchData();
+    function formatNumber(num) {
+      return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+
+    function listenForRealtimeUpdates() {
+      hourlyDataRef.on('child_added', function(snapshot) {
+        fetchData('hour');
+      });
+      hourlyDataETIRef.on('child_added', function(snapshot) {
+        fetchData('hour');
+      });
+      hourlyDataAZTRef.on('child_added', function(snapshot) {
+        fetchData('hour');
+      });
+      hourlyData13NilpeterRef.on('child_added', function(snapshot) {
+        fetchData('hour');
+      });
+
+      currentSpeedRef.on('value', function(snapshot) {
+        if (snapshot.exists()) {
+          var currentSpeed = snapshot.val();
+          $('#currentSpeed').text(formatNumber(currentSpeed));
+          if (currentSpeed > 350) {
+            $('#speedAlert').show();
+          } else {
+            $('#speedAlert').hide();
+          }
+        }
+      });
+
+      currentSpeedETIRef.on('value', function(snapshot) {
+        if (snapshot.exists()) {
+          var currentSpeedETI = snapshot.val();
+          $('#currentSpeedETI').text(formatNumber(currentSpeedETI));
+        }
+      });
+
+      currentSpeedAZTRef.on('value', function(snapshot) {
+        if (snapshot.exists()) {
+          var currentSpeedAZT = snapshot.val();
+          $('#currentSpeedAZT').text(formatNumber(currentSpeedAZT));
+        }
+      });
+
+      currentSpeed13NilpeterRef.on('value', function(snapshot) {
+        if (snapshot.exists()) {
+          var currentSpeed13Nilpeter = snapshot.val();
+          $('#currentSpeed13Nilpeter').text(formatNumber(currentSpeed13Nilpeter));
+        }
+      });
+
+      totalDistanceRef.on('value', function(snapshot) {
+        if (snapshot.exists()) {
+          $('#totalDistance').text(formatNumber(snapshot.val()));
+        }
+      });
+
+      totalDistanceETIRef.on('value', function(snapshot) {
+        if (snapshot.exists()) {
+          $('#totalDistanceETI').text(formatNumber(snapshot.val()));
+        }
+      });
+
+      totalDistanceAZTRef.on('value', function(snapshot) {
+        if (snapshot.exists()) {
+          $('#totalDistanceAZT').text(formatNumber(snapshot.val()));
+        }
+      });
+
+      totalDistance13NilpeterRef.on('value', function(snapshot) {
+        if (snapshot.exists()) {
+          $('#totalDistance13Nilpeter').text(formatNumber(snapshot.val()));
+        }
+      });
+    }
+
+    $(document).ready(function() {
+      $('#timeRange').change(function() {
+        fetchData(this.value);
+      });
+      $('#refreshButton').click(function() {
+        fetchData($('#timeRange').val());
+      });
+      $('#toggleNoiseButton').click(function() {
+        noiseReduction = !noiseReduction;
+        fetchData('hour');
+      });
+      fetchData('hour'); // Default to last hour
+      listenForRealtimeUpdates(); // Listen for real-time updates
+    });
   </script>
 </body>
 </html>
