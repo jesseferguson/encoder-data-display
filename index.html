@@ -160,7 +160,7 @@
 
       snapshot17Nilpeter.forEach(function(childSnapshot) {
         var dataPoint = childSnapshot.val();
-        var timestamp = new Date(dataPoint.timestamp - date.getTimezoneOffset() * 60000);
+        var timestamp = new Date(dataPoint.timestamp);
         if (timestamp >= cutoff) {
           var localTime = convertUTCToLocalTime(timestamp);
           data17Nilpeter.push({ x: localTime, y: dataPoint.minuteDistance });
