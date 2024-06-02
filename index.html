@@ -169,7 +169,7 @@
 
       snapshotETI.forEach(function(childSnapshot) {
         var dataPoint = childSnapshot.val();
-        var timestamp = new Date(dataPoint.timestamp - date.getTimezoneOffset() * 60000);
+        var timestamp = new Date(dataPoint.timestamp);
         if (timestamp >= cutoff) {
           var localTime = convertUTCToLocalTime(timestamp);
           dataETI.push({ x: localTime, y: dataPoint.minuteDistance });
@@ -178,7 +178,7 @@
 
       snapshotAZT.forEach(function(childSnapshot) {
         var dataPoint = childSnapshot.val();
-        var timestamp = new Date(dataPoint.timestamp - date.getTimezoneOffset() * 60000);
+        var timestamp = new Date(dataPoint.timestamp);
         if (timestamp >= cutoff) {
           var localTime = convertUTCToLocalTime(timestamp);
           dataAZT.push({ x: localTime, y: dataPoint.minuteDistance });
@@ -187,7 +187,7 @@
 
       snapshot13Nilpeter.forEach(function(childSnapshot) {
         var dataPoint = childSnapshot.val();
-        var timestamp = new Date(dataPoint.timestamp - date.getTimezoneOffset() * 60000);
+        var timestamp = new Date(dataPoint.timestamp);
         if (timestamp >= cutoff) {
           var localTime = convertUTCToLocalTime(timestamp);
           data13Nilpeter.push({ x: localTime, y: dataPoint.minuteDistance });
