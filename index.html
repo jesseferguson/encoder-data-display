@@ -11,7 +11,7 @@
     #dataChart {
       margin-top: 20px;
       width: 70%;
-      height: 65%;
+      height: auto;
     }
     #dataDisplay {
       display: flex;
@@ -50,7 +50,7 @@
   
   <div id="dataDisplay">
     <div class="dataBlock">
-      <h2>17Nilpeter</h2>
+      <h2>17 Nilpeter</h2>
       <div class="speed">Current Press Speed: <span id="currentSpeed">0</span></div>
       <div>Total Distance: <span id="totalDistance">0</span></div>
     </div>
@@ -60,17 +60,17 @@
       <div>Total Distance: <span id="totalDistanceETI">0</span></div>
     </div>
     <div class="dataBlock">
-      <h2>18AZT</h2>
+      <h2>18 Aztech</h2>
       <div class="speed">Current Press Speed: <span id="currentSpeedAZT">0</span></div>
       <div>Total Distance: <span id="totalDistanceAZT">0</span></div>
     </div>
     <div class="dataBlock">
-      <h2>13Nilpeter</h2>
+      <h2>13 Nilpeter</h2>
       <div class="speed">Current Press Speed: <span id="currentSpeed13Nilpeter">0</span></div>
       <div>Total Distance: <span id="totalDistance13Nilpeter">0</span></div>
     </div>
     <div class="dataBlock">
-      <h2>13AZT</h2>
+      <h2>13 Aztech</h2>
       <div class="speed">Current Press Speed: <span id="currentSpeed13AZT">0</span></div>
       <div>Total Distance: <span id="totalDistance13AZT">0</span></div>
     </div>
@@ -118,39 +118,44 @@
         labels: [],
         datasets: [
           {
-            label: 'Minute Distance (17Nilpeter)',
+            label: 'Minute Distance (17 Nilpeter)',
             data: [],
-            borderColor: 'rgba(75, 192, 192, 1)',
-            borderWidth: 1,
-            fill: false
+            borderColor: 'rgba(255, 99, 132, 1)',
+            borderWidth: 1.5,
+            fill: false,
+            pointRadius: 0
           },
           {
             label: 'Minute Distance (ETI)',
             data: [],
-            borderColor: 'rgba(192, 75, 192, 1)',
-            borderWidth: 1,
-            fill: false
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1.5,
+            fill: false,
+            pointRadius: 0
           },
           {
-            label: 'Minute Distance (18AZT)',
+            label: 'Minute Distance (18 Aztech)',
             data: [],
-            borderColor: 'rgba(75, 75, 192, 1)',
-            borderWidth: 1,
-            fill: false
+            borderColor: 'rgba(255, 206, 86, 1)',
+            borderWidth: 1.5,
+            fill: false,
+            pointRadius: 0
           },
           {
-            label: 'Minute Distance (13Nilpeter)',
+            label: 'Minute Distance (13 Nilpeter)',
             data: [],
-            borderColor: 'rgba(192, 192, 75, 1)',
-            borderWidth: 1,
-            fill: false
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 1.5,
+            fill: false,
+            pointRadius: 0
           },
           {
-            label: 'Minute Distance (13AZT)',
+            label: 'Minute Distance (13 Aztech)',
             data: [],
-            borderColor: 'rgba(75, 192, 75, 1)',
-            borderWidth: 1,
-            fill: false
+            borderColor: 'rgba(153, 102, 255, 1)',
+            borderWidth: 1.5,
+            fill: false,
+            pointRadius: 0
           }
         ]
       },
@@ -159,7 +164,14 @@
           x: {
             type: 'time',
             time: {
-              unit: 'minute'
+              unit: 'minute',
+              stepSize: 5,
+              tooltipFormat: 'HH:mm'
+            },
+            min: Date.now() - 60 * 60 * 1000, // Start x-axis from an hour ago
+            ticks: {
+              autoSkip: false,
+              maxTicksLimit: 12
             }
           }
         }
@@ -266,6 +278,12 @@
       var cutoff = new Date();
       if (timeRange === 'hour') {
         cutoff.setHours(now.getHours() - 1);
+      } else if (timeRange === 'day') {
+        cutoff.setDate(now.getDate() - 1);
+      } else if (timeRange === 'week') {
+        cutoff.setDate(now.getDate() - 7);
+      } else if (timeRange === 'month') {
+        cutoff.setMonth(now.getMonth() - 1);
       }
 
       console.log("Cutoff date: ", cutoff);
@@ -281,19 +299,19 @@
           updateChart(snapshot17Nilpeter, snapshotETI, snapshotAZT, snapshot13Nilpeter, snapshot13AZT, cutoff);
         } else {
           if (!snapshot17Nilpeter.exists()) {
-            console.error("No data available for 17Nilpeter.");
+            console.error("No data available for 17 Nilpeter.");
           }
           if (!snapshotETI.exists()) {
             console.error("No data available for ETI.");
           }
           if (!snapshotAZT.exists()) {
-            console.error("No data available for 18AZT.");
+            console.error("No data available for 18 Aztech.");
           }
           if (!snapshot13Nilpeter.exists()) {
-            console.error("No data available for 13Nilpeter.");
+            console.error("No data available for 13 Nilpeter.");
           }
           if (!snapshot13AZT.exists()) {
-            console.error("No data available for 13AZT.");
+            console.error("No data available for 13 Aztech.");
           }
         }
       }).catch(function(error) {
@@ -332,10 +350,10 @@
           var currentSpeedAZT = snapshot.val();
           $('#currentSpeedAZT').text(formatNumber(currentSpeedAZT));
         } else {
-          console.error("No current speed data available for AZT.");
+          console.error("No current speed data available for 18 Aztech.");
         }
       }, function(error) {
-        console.error("Error fetching current speed for AZT: ", error);
+        console.error("Error fetching current speed for 18 Aztech: ", error);
       });
 
       currentSpeed13NilpeterRef.once('value', function(snapshot) {
@@ -343,10 +361,10 @@
           var currentSpeed13Nilpeter = snapshot.val();
           $('#currentSpeed13Nilpeter').text(formatNumber(currentSpeed13Nilpeter));
         } else {
-          console.error("No current speed data available for 13Nilpeter.");
+          console.error("No current speed data available for 13 Nilpeter.");
         }
       }, function(error) {
-        console.error("Error fetching current speed for 13Nilpeter: ", error);
+        console.error("Error fetching current speed for 13 Nilpeter: ", error);
       });
 
       currentSpeed13AZTRef.once('value', function(snapshot) {
@@ -354,10 +372,10 @@
           var currentSpeed13AZT = snapshot.val();
           $('#currentSpeed13AZT').text(formatNumber(currentSpeed13AZT));
         } else {
-          console.error("No current speed data available for 13AZT.");
+          console.error("No current speed data available for 13 Aztech.");
         }
       }, function(error) {
-        console.error("Error fetching current speed for 13AZT: ", error);
+        console.error("Error fetching current speed for 13 Aztech: ", error);
       });
 
       totalDistanceRef.once('value', function(snapshot) {
@@ -384,30 +402,30 @@
         if (snapshot.exists()) {
           $('#totalDistanceAZT').text(formatNumber(snapshot.val()));
         } else {
-          console.error("No total distance data available for AZT.");
+          console.error("No total distance data available for 18 Aztech.");
         }
       }, function(error) {
-        console.error("Error fetching total distance for AZT: ", error);
+        console.error("Error fetching total distance for 18 Aztech: ", error);
       });
 
       totalDistance13NilpeterRef.once('value', function(snapshot) {
         if (snapshot.exists()) {
           $('#totalDistance13Nilpeter').text(formatNumber(snapshot.val()));
         } else {
-          console.error("No total distance data available for 13Nilpeter.");
+          console.error("No total distance data available for 13 Nilpeter.");
         }
       }, function(error) {
-        console.error("Error fetching total distance for 13Nilpeter: ", error);
+        console.error("Error fetching total distance for 13 Nilpeter: ", error);
       });
 
       totalDistance13AZTRef.once('value', function(snapshot) {
         if (snapshot.exists()) {
           $('#totalDistance13AZT').text(formatNumber(snapshot.val()));
         } else {
-          console.error("No total distance data available for 13AZT.");
+          console.error("No total distance data available for 13 Aztech.");
         }
       }, function(error) {
-        console.error("Error fetching total distance for 13AZT: ", error);
+        console.error("Error fetching total distance for 13 Aztech: ", error);
       });
     }
 
@@ -512,7 +530,7 @@
       });
       $('#toggleNoiseButton').click(function() {
         noiseReduction = !noiseReduction;
-        fetchData('hour');
+        fetchData($('#timeRange').val());
       });
       fetchData('hour'); // Default to last hour
       listenForRealtimeUpdates(); // Listen for real-time updates
