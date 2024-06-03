@@ -109,6 +109,7 @@
     var totalDistance13AZTRef = firebase.database().ref('13AZT/totalDistance');
 
     var noiseReduction = false;
+    var selectedTimeRange = 'hour'; // Default to last hour
 
     // Initialize Chart
     var ctx = document.getElementById('dataChart').getContext('2d');
@@ -121,7 +122,7 @@
             label: 'Minute Distance (17 Nilpeter)',
             data: [],
             borderColor: 'rgba(255, 99, 132, 1)',
-            borderWidth: 1.5,
+            borderWidth: 2,
             fill: false,
             pointRadius: 0
           },
@@ -129,15 +130,15 @@
             label: 'Minute Distance (ETI)',
             data: [],
             borderColor: 'rgba(54, 162, 235, 1)',
-            borderWidth: 1.5,
+            borderWidth: 2,
             fill: false,
             pointRadius: 0
           },
           {
             label: 'Minute Distance (18 Aztech)',
             data: [],
-            borderColor: 'rgba(255, 206, 86, 1)',
-            borderWidth: 1.5,
+            borderColor: 'rgba(255, 159, 64, 1)', // Darker color
+            borderWidth: 2,
             fill: false,
             pointRadius: 0
           },
@@ -145,7 +146,7 @@
             label: 'Minute Distance (13 Nilpeter)',
             data: [],
             borderColor: 'rgba(75, 192, 192, 1)',
-            borderWidth: 1.5,
+            borderWidth: 2,
             fill: false,
             pointRadius: 0
           },
@@ -153,13 +154,28 @@
             label: 'Minute Distance (13 Aztech)',
             data: [],
             borderColor: 'rgba(153, 102, 255, 1)',
-            borderWidth: 1.5,
+            borderWidth: 2,
             fill: false,
             pointRadius: 0
           }
         ]
       },
       options: {
+        tooltips: {
+          mode: 'nearest',
+          intersect: false,
+          callbacks: {
+            label: function(tooltipItem, data) {
+              var datasetLabel = data.datasets[tooltipItem.datasetIndex].label || '';
+              var value = tooltipItem.yLabel;
+              return datasetLabel + ': ' + value;
+            }
+          }
+        },
+        hover: {
+          mode: 'nearest',
+          intersect: false
+        },
         scales: {
           x: {
             type: 'time',
@@ -168,7 +184,6 @@
               stepSize: 5,
               tooltipFormat: 'HH:mm'
             },
-            min: Date.now() - 60 * 60 * 1000, // Start x-axis from an hour ago
             ticks: {
               autoSkip: false,
               maxTicksLimit: 12
@@ -274,17 +289,25 @@
     }
 
     function fetchData(timeRange) {
+      selectedTimeRange = timeRange; // Update the selected time range
       var now = new Date();
       var cutoff = new Date();
       if (timeRange === 'hour') {
         cutoff.setHours(now.getHours() - 1);
+        dataChart.options.scales.x.time.unit = 'minute';
       } else if (timeRange === 'day') {
         cutoff.setDate(now.getDate() - 1);
+        dataChart.options.scales.x.time.unit = 'hour';
       } else if (timeRange === 'week') {
         cutoff.setDate(now.getDate() - 7);
+        dataChart.options.scales.x.time.unit = 'day';
       } else if (timeRange === 'month') {
         cutoff.setMonth(now.getMonth() - 1);
+        dataChart.options.scales.x.time.unit = 'day';
       }
+
+      dataChart.options.scales.x.min = cutoff;
+      dataChart.update();
 
       console.log("Cutoff date: ", cutoff);
 
@@ -435,19 +458,19 @@
 
     function listenForRealtimeUpdates() {
       hourlyDataRef.on('child_added', function(snapshot) {
-        fetchData('hour');
+        fetchData(selectedTimeRange); // Use the selected time range
       });
       hourlyDataETIRef.on('child_added', function(snapshot) {
-        fetchData('hour');
+        fetchData(selectedTimeRange); // Use the selected time range
       });
       hourlyDataAZTRef.on('child_added', function(snapshot) {
-        fetchData('hour');
+        fetchData(selectedTimeRange); // Use the selected time range
       });
       hourlyData13NilpeterRef.on('child_added', function(snapshot) {
-        fetchData('hour');
+        fetchData(selectedTimeRange); // Use the selected time range
       });
       hourlyData13AZTRef.on('child_added', function(snapshot) {
-        fetchData('hour');
+        fetchData(selectedTimeRange); // Use the selected time range
       });
 
       currentSpeedRef.on('value', function(snapshot) {
@@ -532,7 +555,7 @@
         noiseReduction = !noiseReduction;
         fetchData($('#timeRange').val());
       });
-      fetchData('hour'); // Default to last hour
+      fetchData(selectedTimeRange); // Use the selected time range
       listenForRealtimeUpdates(); // Listen for real-time updates
     });
   </script>
