@@ -42,6 +42,7 @@
     .dataBlock .speed {
       font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
       font-size: 24px;
+      font-weight: bold;
     }
 
     .rank-1 {
@@ -155,7 +156,7 @@
             label: 'Minute Distance (17 Nilpeter)',
             data: [],
             borderColor: 'rgba(255, 99, 132, 1)',
-            borderWidth: 3.5,
+            borderWidth: 5.5,
             fill: false,
             pointRadius: 0
           },
@@ -163,7 +164,7 @@
             label: 'Minute Distance (ETI)',
             data: [],
             borderColor: 'rgba(54, 162, 235, 1)',
-            borderWidth: 3.5,
+            borderWidth: 5.5,
             fill: false,
             pointRadius: 0
           },
@@ -171,7 +172,7 @@
             label: 'Minute Distance (18 Aztech)',
             data: [],
             borderColor: 'rgba(255, 159, 64, 1)', // Darker color
-            borderWidth: 3.5,
+            borderWidth: 5.5,
             fill: false,
             pointRadius: 0
           },
@@ -179,7 +180,7 @@
             label: 'Minute Distance (13 Nilpeter)',
             data: [],
             borderColor: 'rgba(75, 192, 192, 1)',
-            borderWidth: 3.5,
+            borderWidth: 5.5,
             fill: false,
             pointRadius: 0
           },
@@ -187,7 +188,7 @@
             label: 'Minute Distance (13 Aztech)',
             data: [],
             borderColor: 'rgba(153, 102, 255, 1)',
-            borderWidth: 3.5,
+            borderWidth: 5.5,
             fill: false,
             pointRadius: 0
           }
@@ -383,8 +384,6 @@
           } else {
             $('#speedAlert').hide();
           }
-        } else {
-          console.error("No current speed data available for 17 Nilpeter.");
         }
       }, function (error) {
         console.error("Error fetching current speed: ", error);
@@ -394,8 +393,6 @@
         if (snapshot.exists()) {
           var currentSpeedETI = snapshot.val();
           $('#currentSpeedETI').text(formatNumber(currentSpeedETI));
-        } else {
-          console.error("No current speed data available for ETI.");
         }
       }, function (error) {
         console.error("Error fetching current speed for ETI: ", error);
@@ -405,8 +402,6 @@
         if (snapshot.exists()) {
           var currentSpeedAZT = snapshot.val();
           $('#currentSpeedAZT').text(formatNumber(currentSpeedAZT));
-        } else {
-          console.error("No current speed data available for 18 Aztech.");
         }
       }, function (error) {
         console.error("Error fetching current speed for 18 Aztech: ", error);
@@ -416,8 +411,6 @@
         if (snapshot.exists()) {
           var currentSpeed13Nilpeter = snapshot.val();
           $('#currentSpeed13Nilpeter').text(formatNumber(currentSpeed13Nilpeter));
-        } else {
-          console.error("No current speed data available for 13 Nilpeter.");
         }
       }, function (error) {
         console.error("Error fetching current speed for 13 Nilpeter: ", error);
@@ -427,8 +420,6 @@
         if (snapshot.exists()) {
           var currentSpeed13AZT = snapshot.val();
           $('#currentSpeed13AZT').text(formatNumber(currentSpeed13AZT));
-        } else {
-          console.error("No current speed data available for 13 Aztech.");
         }
       }, function (error) {
         console.error("Error fetching current speed for 13 Aztech: ", error);
@@ -464,7 +455,7 @@
           $('#dataDisplay').append(`
             <div class="dataBlock ${rankClass}">
               <h2>${press.id} ${badge}</h2>
-              <div class="speed">Current Press Speed: <span id="${press.speedId}">0</span></div>
+              <div class="speed" id="${press.speedId}">0</div>
               <div>Total Distance: <span id="${press.totalDistanceId}">0</span></div>
             </div>
           `);
@@ -509,55 +500,40 @@
       currentSpeedRef.on('value', function (snapshot) {
         if (snapshot.exists()) {
           var currentSpeed = snapshot.val();
-          console.log("17 Nilpeter Current Speed: ", currentSpeed); // Debugging
           $('#currentSpeed').text(formatNumber(currentSpeed));
           if (currentSpeed > 350) {
             $('#speedAlert').show();
           } else {
             $('#speedAlert').hide();
           }
-        } else {
-          console.error("No current speed data available for 17 Nilpeter.");
         }
       });
 
       currentSpeedETIRef.on('value', function (snapshot) {
         if (snapshot.exists()) {
           var currentSpeedETI = snapshot.val();
-          console.log("ETI Current Speed: ", currentSpeedETI); // Debugging
           $('#currentSpeedETI').text(formatNumber(currentSpeedETI));
-        } else {
-          console.error("No current speed data available for ETI.");
         }
       });
 
       currentSpeedAZTRef.on('value', function (snapshot) {
         if (snapshot.exists()) {
           var currentSpeedAZT = snapshot.val();
-          console.log("18 Aztech Current Speed: ", currentSpeedAZT); // Debugging
           $('#currentSpeedAZT').text(formatNumber(currentSpeedAZT));
-        } else {
-          console.error("No current speed data available for 18 Aztech.");
         }
       });
 
       currentSpeed13NilpeterRef.on('value', function (snapshot) {
         if (snapshot.exists()) {
           var currentSpeed13Nilpeter = snapshot.val();
-          console.log("13 Nilpeter Current Speed: ", currentSpeed13Nilpeter); // Debugging
           $('#currentSpeed13Nilpeter').text(formatNumber(currentSpeed13Nilpeter));
-        } else {
-          console.error("No current speed data available for 13 Nilpeter.");
         }
       });
 
       currentSpeed13AZTRef.on('value', function (snapshot) {
         if (snapshot.exists()) {
           var currentSpeed13AZT = snapshot.val();
-          console.log("13 Aztech Current Speed: ", currentSpeed13AZT); // Debugging
           $('#currentSpeed13AZT').text(formatNumber(currentSpeed13AZT));
-        } else {
-          console.error("No current speed data available for 13 Aztech.");
         }
       });
 
