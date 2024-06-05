@@ -95,8 +95,7 @@
   <h3>Total Footage: <span id="totalFootage">0</span></h3>
   <div id="options">
     <select id="timeRange">
-      <option value="hour">Last Hour</option>
-      <option value="day">Last Day</option>
+      <option value="day">Today</option>
       <option value="week">Last Week</option>
       <option value="month">Last Month</option>
     </select>
@@ -126,24 +125,32 @@
     firebase.initializeApp(firebaseConfig);
 
     // References to your data
-    var hourlyDataRef = firebase.database().ref('17Nilpeter_hourlyData');
-    var hourlyDataETIRef = firebase.database().ref('ETI_hourlyData');
-    var hourlyDataAZTRef = firebase.database().ref('18AZT_hourlyData');
-    var hourlyData13NilpeterRef = firebase.database().ref('13Nilpeter_hourlyData');
-    var hourlyData13AZTRef = firebase.database().ref('13AZT_hourlyData');
-    var currentSpeedRef = firebase.database().ref('17Nilpeter/currentSpeed');
-    var currentSpeedETIRef = firebase.database().ref('ETI/currentSpeed');
-    var currentSpeedAZTRef = firebase.database().ref('18AZT/currentSpeed');
-    var currentSpeed13NilpeterRef = firebase.database().ref('13Nilpeter/currentSpeed');
-    var currentSpeed13AZTRef = firebase.database().ref('13AZT/currentSpeed');
-    var totalDistanceRef = firebase.database().ref('17Nilpeter/totalDistance');
-    var totalDistanceETIRef = firebase.database().ref('ETI/totalDistance');
-    var totalDistanceAZTRef = firebase.database().ref('18AZT/totalDistance');
-    var totalDistance13NilpeterRef = firebase.database().ref('13Nilpeter/totalDistance');
-    var totalDistance13AZTRef = firebase.database().ref('13AZT/totalDistance');
+    var hourlyDataRefs = {
+      '17Nilpeter': firebase.database().ref('17Nilpeter_hourlyData'),
+      'ETI': firebase.database().ref('ETI_hourlyData'),
+      '18AZT': firebase.database().ref('18AZT_hourlyData'),
+      '13Nilpeter': firebase.database().ref('13Nilpeter_hourlyData'),
+      '13AZT': firebase.database().ref('13AZT_hourlyData')
+    };
+
+    var currentSpeedRefs = {
+      '17Nilpeter': firebase.database().ref('17Nilpeter/currentSpeed'),
+      'ETI': firebase.database().ref('ETI/currentSpeed'),
+      '18AZT': firebase.database().ref('18AZT/currentSpeed'),
+      '13Nilpeter': firebase.database().ref('13Nilpeter/currentSpeed'),
+      '13AZT': firebase.database().ref('13AZT/currentSpeed')
+    };
+
+    var totalDistanceRefs = {
+      '17Nilpeter': firebase.database().ref('17Nilpeter/totalDistance'),
+      'ETI': firebase.database().ref('ETI/totalDistance'),
+      '18AZT': firebase.database().ref('18AZT/totalDistance'),
+      '13Nilpeter': firebase.database().ref('13Nilpeter/totalDistance'),
+      '13AZT': firebase.database().ref('13AZT/totalDistance')
+    };
 
     var noiseReduction = false;
-    var selectedTimeRange = 'hour'; // Default to last hour
+    var selectedTimeRange = 'day'; // Default to today
 
     // Initialize Chart
     var ctx = document.getElementById('dataChart').getContext('2d');
@@ -156,7 +163,7 @@
             label: 'Minute Distance (17 Nilpeter)',
             data: [],
             borderColor: 'rgba(255, 99, 132, 1)',
-            borderWidth: 5.5,
+            borderWidth: 3.5,
             fill: false,
             pointRadius: 0
           },
@@ -164,7 +171,7 @@
             label: 'Minute Distance (ETI)',
             data: [],
             borderColor: 'rgba(54, 162, 235, 1)',
-            borderWidth: 5.5,
+            borderWidth: 3.5,
             fill: false,
             pointRadius: 0
           },
@@ -172,7 +179,7 @@
             label: 'Minute Distance (18 Aztech)',
             data: [],
             borderColor: 'rgba(255, 159, 64, 1)', // Darker color
-            borderWidth: 5.5,
+            borderWidth: 3.5,
             fill: false,
             pointRadius: 0
           },
@@ -180,7 +187,7 @@
             label: 'Minute Distance (13 Nilpeter)',
             data: [],
             borderColor: 'rgba(75, 192, 192, 1)',
-            borderWidth: 5.5,
+            borderWidth: 3.5,
             fill: false,
             pointRadius: 0
           },
@@ -188,46 +195,63 @@
             label: 'Minute Distance (13 Aztech)',
             data: [],
             borderColor: 'rgba(153, 102, 255, 1)',
-            borderWidth: 5.5,
+            borderWidth: 3.5,
             fill: false,
             pointRadius: 0
           }
         ]
       },
       options: {
-        tooltips: {
-          mode: 'nearest',
-          intersect: false,
-          callbacks: {
-            label: function (tooltipItem, data) {
-              var datasetLabel = data.datasets[tooltipItem.datasetIndex].label || '';
-              var value = tooltipItem.yLabel;
-              return datasetLabel + ': ' + value;
-            }
+        plugins: {
+          annotation: {
+            annotations: [
+              {
+                type: 'box',
+                xMin: new Date().setHours(6, 0, 0, 0),
+                xMax: new Date().setHours(16, 0, 0, 0),
+                backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1,
+                label: {
+                  content: '1st Shift',
+                  enabled: true,
+                  position: 'start'
+                }
+              },
+              {
+                type: 'box',
+                xMin: new Date().setHours(16, 0, 0, 0),
+                xMax: new Date().setHours(2, 30, 0, 0),
+                backgroundColor: 'rgba(255, 159, 64, 0.1)',
+                borderColor: 'rgba(255, 159, 64, 1)',
+                borderWidth: 1,
+                label: {
+                  content: '2nd Shift',
+                  enabled: true,
+                  position: 'start'
+                }
+              }
+            ]
           }
-        },
-        hover: {
-          mode: 'nearest',
-          intersect: false
         },
         scales: {
           x: {
             type: 'time',
             time: {
               unit: 'minute',
-              stepSize: 5,
+              stepSize: 30,
               tooltipFormat: 'HH:mm'
             },
             ticks: {
-              autoSkip: false,
-              maxTicksLimit: 12
+              autoSkip: true,
+              maxTicksLimit: 24
             }
           }
         }
       }
     });
 
-    function updateChart(snapshot17Nilpeter, snapshotETI, snapshotAZT, snapshot13Nilpeter, snapshot13AZT, cutoff) {
+    function updateChart(snapshotData, cutoff) {
       var labels = [];
       var data17Nilpeter = [];
       var dataETI = [];
@@ -235,7 +259,7 @@
       var data13Nilpeter = [];
       var data13AZT = [];
 
-      snapshot17Nilpeter.forEach(function (childSnapshot) {
+      snapshotData['17Nilpeter'].forEach(function (childSnapshot) {
         var dataPoint = childSnapshot.val();
         var timestamp = new Date(dataPoint.timestamp);
         if (timestamp >= cutoff) {
@@ -244,7 +268,7 @@
         }
       });
 
-      snapshotETI.forEach(function (childSnapshot) {
+      snapshotData['ETI'].forEach(function (childSnapshot) {
         var dataPoint = childSnapshot.val();
         var timestamp = new Date(dataPoint.timestamp);
         if (timestamp >= cutoff) {
@@ -253,7 +277,7 @@
         }
       });
 
-      snapshotAZT.forEach(function (childSnapshot) {
+      snapshotData['18AZT'].forEach(function (childSnapshot) {
         var dataPoint = childSnapshot.val();
         var timestamp = new Date(dataPoint.timestamp);
         if (timestamp >= cutoff) {
@@ -262,7 +286,7 @@
         }
       });
 
-      snapshot13Nilpeter.forEach(function (childSnapshot) {
+      snapshotData['13Nilpeter'].forEach(function (childSnapshot) {
         var dataPoint = childSnapshot.val();
         var timestamp = new Date(dataPoint.timestamp);
         if (timestamp >= cutoff) {
@@ -271,7 +295,7 @@
         }
       });
 
-      snapshot13AZT.forEach(function (childSnapshot) {
+      snapshotData['13AZT'].forEach(function (childSnapshot) {
         var dataPoint = childSnapshot.val();
         var timestamp = new Date(dataPoint.timestamp);
         if (timestamp >= cutoff) {
@@ -326,11 +350,10 @@
       selectedTimeRange = timeRange; // Update the selected time range
       var now = new Date();
       var cutoff = new Date();
-      if (timeRange === 'hour') {
-        cutoff.setHours(now.getHours() - 1);
-        dataChart.options.scales.x.time.unit = 'minute';
-      } else if (timeRange === 'day') {
-        cutoff.setDate(now.getDate() - 1);
+      if (timeRange === 'day') {
+        cutoff.setHours(5, 0, 0, 0);
+        now.setHours(5, 0, 0, 0);
+        now.setDate(now.getDate() + 1);
         dataChart.options.scales.x.time.unit = 'hour';
       } else if (timeRange === 'week') {
         cutoff.setDate(now.getDate() - 7);
@@ -341,107 +364,52 @@
       }
 
       dataChart.options.scales.x.min = cutoff;
+      dataChart.options.scales.x.max = now;
       dataChart.update();
 
       console.log("Cutoff date: ", cutoff);
 
-      Promise.all([
-        hourlyDataRef.once('value'),
-        hourlyDataETIRef.once('value'),
-        hourlyDataAZTRef.once('value'),
-        hourlyData13NilpeterRef.once('value'),
-        hourlyData13AZTRef.once('value')
-      ]).then(function ([snapshot17Nilpeter, snapshotETI, snapshotAZT, snapshot13Nilpeter, snapshot13AZT]) {
-        if (snapshot17Nilpeter.exists() && snapshotETI.exists() && snapshotAZT.exists() && snapshot13Nilpeter.exists() && snapshot13AZT.exists()) {
-          updateChart(snapshot17Nilpeter, snapshotETI, snapshotAZT, snapshot13Nilpeter, snapshot13AZT, cutoff);
-        } else {
-          if (!snapshot17Nilpeter.exists()) {
-            console.error("No data available for 17 Nilpeter.");
+      var dataPromises = Object.keys(hourlyDataRefs).map(key => hourlyDataRefs[key].once('value').then(snapshot => ({ key, snapshot })));
+
+      Promise.all(dataPromises).then(results => {
+        var snapshotData = {};
+        results.forEach(result => {
+          if (result.snapshot.exists()) {
+            snapshotData[result.key] = result.snapshot;
+          } else {
+            console.error(`No data available for ${result.key}.`);
           }
-          if (!snapshotETI.exists()) {
-            console.error("No data available for ETI.");
-          }
-          if (!snapshotAZT.exists()) {
-            console.error("No data available for 18 Aztech.");
-          }
-          if (!snapshot13Nilpeter.exists()) {
-            console.error("No data available for 13 Nilpeter.");
-          }
-          if (!snapshot13AZT.exists()) {
-            console.error("No data available for 13 Aztech.");
-          }
-        }
+        });
+        updateChart(snapshotData, cutoff);
       }).catch(function (error) {
         console.error("Error fetching data: ", error);
       });
 
-      currentSpeedRef.once('value', function (snapshot) {
-        if (snapshot.exists()) {
-          var currentSpeed = snapshot.val();
-          $('#currentSpeed').text(formatNumber(currentSpeed));
-          if (currentSpeed > 350) {
-            $('#speedAlert').show();
+      var speedPromises = Object.keys(currentSpeedRefs).map(key => currentSpeedRefs[key].once('value').then(snapshot => ({ key, snapshot })));
+      var distancePromises = Object.keys(totalDistanceRefs).map(key => totalDistanceRefs[key].once('value').then(snapshot => ({ key, snapshot })));
+
+      Promise.all(speedPromises).then(results => {
+        results.forEach(result => {
+          if (result.snapshot.exists()) {
+            $(`#${result.key}Speed`).text(formatNumber(result.snapshot.val()));
           } else {
-            $('#speedAlert').hide();
+            console.error(`No current speed data available for ${result.key}.`);
           }
-        }
-      }, function (error) {
-        console.error("Error fetching current speed: ", error);
+        });
+      }).catch(function (error) {
+        console.error("Error fetching current speeds: ", error);
       });
 
-      currentSpeedETIRef.once('value', function (snapshot) {
-        if (snapshot.exists()) {
-          var currentSpeedETI = snapshot.val();
-          $('#currentSpeedETI').text(formatNumber(currentSpeedETI));
-        }
-      }, function (error) {
-        console.error("Error fetching current speed for ETI: ", error);
-      });
-
-      currentSpeedAZTRef.once('value', function (snapshot) {
-        if (snapshot.exists()) {
-          var currentSpeedAZT = snapshot.val();
-          $('#currentSpeedAZT').text(formatNumber(currentSpeedAZT));
-        }
-      }, function (error) {
-        console.error("Error fetching current speed for 18 Aztech: ", error);
-      });
-
-      currentSpeed13NilpeterRef.once('value', function (snapshot) {
-        if (snapshot.exists()) {
-          var currentSpeed13Nilpeter = snapshot.val();
-          $('#currentSpeed13Nilpeter').text(formatNumber(currentSpeed13Nilpeter));
-        }
-      }, function (error) {
-        console.error("Error fetching current speed for 13 Nilpeter: ", error);
-      });
-
-      currentSpeed13AZTRef.once('value', function (snapshot) {
-        if (snapshot.exists()) {
-          var currentSpeed13AZT = snapshot.val();
-          $('#currentSpeed13AZT').text(formatNumber(currentSpeed13AZT));
-        }
-      }, function (error) {
-        console.error("Error fetching current speed for 13 Aztech: ", error);
-      });
-
-      Promise.all([
-        totalDistanceRef.once('value'),
-        totalDistanceETIRef.once('value'),
-        totalDistanceAZTRef.once('value'),
-        totalDistance13NilpeterRef.once('value'),
-        totalDistance13AZTRef.once('value')
-      ]).then(function ([snapshotTotalDistance, snapshotTotalDistanceETI, snapshotTotalDistanceAZT, snapshotTotalDistance13Nilpeter, snapshotTotalDistance13AZT]) {
-        var presses = [
-          { id: '17 Nilpeter', speedId: 'currentSpeed', totalDistanceId: 'totalDistance', snapshot: snapshotTotalDistance },
-          { id: 'ETI', speedId: 'currentSpeedETI', totalDistanceId: 'totalDistanceETI', snapshot: snapshotTotalDistanceETI },
-          { id: '18 Aztech', speedId: 'currentSpeedAZT', totalDistanceId: 'totalDistanceAZT', snapshot: snapshotTotalDistanceAZT },
-          { id: '13 Nilpeter', speedId: 'currentSpeed13Nilpeter', totalDistanceId: 'totalDistance13Nilpeter', snapshot: snapshotTotalDistance13Nilpeter },
-          { id: '13 Aztech', speedId: 'currentSpeed13AZT', totalDistanceId: 'totalDistance13AZT', snapshot: snapshotTotalDistance13AZT }
-        ];
+      Promise.all(distancePromises).then(results => {
+        var presses = results.map(result => {
+          return {
+            id: result.key,
+            totalDistance: result.snapshot.exists() ? result.snapshot.val() : 0
+          };
+        });
 
         // Sort presses by total distance
-        presses.sort((a, b) => b.snapshot.val() - a.snapshot.val());
+        presses.sort((a, b) => b.totalDistance - a.totalDistance);
 
         // Clear existing data blocks
         $('#dataDisplay').empty();
@@ -455,22 +423,14 @@
           $('#dataDisplay').append(`
             <div class="dataBlock ${rankClass}">
               <h2>${press.id} ${badge}</h2>
-              <div class="speed" id="${press.speedId}">0</div>
-              <div>Total Distance: <span id="${press.totalDistanceId}">0</span></div>
+              <div class="speed"><span id="${press.id}Speed">0</span></div>
+              <div>Total Distance: <span id="${press.id}TotalDistance">${formatNumber(press.totalDistance)}</span></div>
             </div>
           `);
         });
 
-        var totalFootage = presses.reduce((acc, press) => acc + (press.snapshot.exists() ? press.snapshot.val() : 0), 0);
+        var totalFootage = presses.reduce((acc, press) => acc + press.totalDistance, 0);
         $('#totalFootage').text(formatNumber(totalFootage));
-
-        presses.forEach(press => {
-          if (press.snapshot.exists()) {
-            $(`#${press.totalDistanceId}`).text(formatNumber(press.snapshot.val()));
-          } else {
-            console.error(`No total distance data available for ${press.id}.`);
-          }
-        });
       }).catch(function (error) {
         console.error("Error fetching total distances: ", error);
       });
@@ -481,90 +441,35 @@
     }
 
     function listenForRealtimeUpdates() {
-      hourlyDataRef.on('child_added', function (snapshot) {
-        fetchData(selectedTimeRange); // Use the selected time range
-      });
-      hourlyDataETIRef.on('child_added', function (snapshot) {
-        fetchData(selectedTimeRange); // Use the selected time range
-      });
-      hourlyDataAZTRef.on('child_added', function (snapshot) {
-        fetchData(selectedTimeRange); // Use the selected time range
-      });
-      hourlyData13NilpeterRef.on('child_added', function (snapshot) {
-        fetchData(selectedTimeRange); // Use the selected time range
-      });
-      hourlyData13AZTRef.on('child_added', function (snapshot) {
-        fetchData(selectedTimeRange); // Use the selected time range
+      Object.keys(hourlyDataRefs).forEach(key => {
+        hourlyDataRefs[key].on('child_added', function (snapshot) {
+          fetchData(selectedTimeRange); // Use the selected time range
+        });
       });
 
-      currentSpeedRef.on('value', function (snapshot) {
-        if (snapshot.exists()) {
-          var currentSpeed = snapshot.val();
-          $('#currentSpeed').text(formatNumber(currentSpeed));
-          if (currentSpeed > 350) {
-            $('#speedAlert').show();
+      Object.keys(currentSpeedRefs).forEach(key => {
+        currentSpeedRefs[key].on('value', function (snapshot) {
+          if (snapshot.exists()) {
+            var currentSpeed = snapshot.val();
+            console.log(`${key} Current Speed: `, currentSpeed); // Debugging
+            $(`#${key}Speed`).text(formatNumber(currentSpeed));
+            if (currentSpeed > 350) {
+              $('#speedAlert').show();
+            } else {
+              $('#speedAlert').hide();
+            }
           } else {
-            $('#speedAlert').hide();
+            console.error(`No current speed data available for ${key}.`);
           }
-        }
+        });
       });
 
-      currentSpeedETIRef.on('value', function (snapshot) {
-        if (snapshot.exists()) {
-          var currentSpeedETI = snapshot.val();
-          $('#currentSpeedETI').text(formatNumber(currentSpeedETI));
-        }
-      });
-
-      currentSpeedAZTRef.on('value', function (snapshot) {
-        if (snapshot.exists()) {
-          var currentSpeedAZT = snapshot.val();
-          $('#currentSpeedAZT').text(formatNumber(currentSpeedAZT));
-        }
-      });
-
-      currentSpeed13NilpeterRef.on('value', function (snapshot) {
-        if (snapshot.exists()) {
-          var currentSpeed13Nilpeter = snapshot.val();
-          $('#currentSpeed13Nilpeter').text(formatNumber(currentSpeed13Nilpeter));
-        }
-      });
-
-      currentSpeed13AZTRef.on('value', function (snapshot) {
-        if (snapshot.exists()) {
-          var currentSpeed13AZT = snapshot.val();
-          $('#currentSpeed13AZT').text(formatNumber(currentSpeed13AZT));
-        }
-      });
-
-      totalDistanceRef.on('value', function (snapshot) {
-        if (snapshot.exists()) {
-          $('#totalDistance').text(formatNumber(snapshot.val()));
-        }
-      });
-
-      totalDistanceETIRef.on('value', function (snapshot) {
-        if (snapshot.exists()) {
-          $('#totalDistanceETI').text(formatNumber(snapshot.val()));
-        }
-      });
-
-      totalDistanceAZTRef.on('value', function (snapshot) {
-        if (snapshot.exists()) {
-          $('#totalDistanceAZT').text(formatNumber(snapshot.val()));
-        }
-      });
-
-      totalDistance13NilpeterRef.on('value', function (snapshot) {
-        if (snapshot.exists()) {
-          $('#totalDistance13Nilpeter').text(formatNumber(snapshot.val()));
-        }
-      });
-
-      totalDistance13AZTRef.on('value', function (snapshot) {
-        if (snapshot.exists()) {
-          $('#totalDistance13AZT').text(formatNumber(snapshot.val()));
-        }
+      Object.keys(totalDistanceRefs).forEach(key => {
+        totalDistanceRefs[key].on('value', function (snapshot) {
+          if (snapshot.exists()) {
+            $(`#${key}TotalDistance`).text(formatNumber(snapshot.val()));
+          }
+        });
       });
     }
 
