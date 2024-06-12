@@ -108,7 +108,7 @@
       let chart;
 
       // Function to render the chart
-      function renderChart(data17, data13, dataETI, data18, data13AZT) {
+      function renderChart(data17, data13, dataETI, data18, data13AZT, dataSlitter) {
         chart = Highcharts.chart('container', {
           chart: {
             type: 'line'
@@ -191,6 +191,10 @@
             name: '13 Aztech',
             data: data13AZT,
             color: '#FF4500' // OrangeRed color for 13 Aztech
+          }, {
+            name: 'Slitter',
+            data: dataSlitter,
+            color: '#0000FF' // Blue color for Slitter
           }]
         });
       }
@@ -209,11 +213,13 @@
         const refETI = database.ref('ETI_hourlyData');
         const ref18 = database.ref('18AZT_hourlyData');
         const ref13AZT = database.ref('13AZT_hourlyData');
+        const refSlitter = database.ref('Slitter_hourlyData');
         const data17 = [];
         const data13 = [];
         const dataETI = [];
         const data18 = [];
         const data13AZT = [];
+        const dataSlitter = [];
 
         const fetchDataFromRef = (ref, dataArray, name) => {
           return new Promise((resolve) => {
@@ -237,18 +243,20 @@
           fetchDataFromRef(ref13, data13, '13Nilpeter_hourlyData'),
           fetchDataFromRef(refETI, dataETI, 'ETI_hourlyData'),
           fetchDataFromRef(ref18, data18, '18AZT_hourlyData'),
-          fetchDataFromRef(ref13AZT, data13AZT, '13AZT_hourlyData')
+          fetchDataFromRef(ref13AZT, data13AZT, '13AZT_hourlyData'),
+          fetchDataFromRef(refSlitter, dataSlitter, 'Slitter_hourlyData')
         ]).then(() => {
           console.log("Data for 17 Nilpeter:", data17);
           console.log("Data for 13 Nilpeter:", data13);
           console.log("Data for ETI:", dataETI);
           console.log("Data for 18 Aztech:", data18);
           console.log("Data for 13 Aztech:", data13AZT);
+          console.log("Data for Slitter:", dataSlitter);
 
           if (!chart) {
-            renderChart(data17, data13, dataETI, data18, data13AZT);
+            renderChart(data17, data13, dataETI, data18, data13AZT, dataSlitter);
           } else {
-            updateChart(data17, data13, dataETI, data18, data13AZT);
+            updateChart(data17, data13, dataETI, data18, data13AZT, dataSlitter);
           }
 
           fetchCurrentSpeeds();
@@ -256,13 +264,14 @@
       }
 
       // Function to update the chart without redrawing the lines
-      function updateChart(data17, data13, dataETI, data18, data13AZT) {
+      function updateChart(data17, data13, dataETI, data18, data13AZT, dataSlitter) {
         const series = chart.series;
         series[0].setData(data17, false);
         series[1].setData(data13, false);
         series[2].setData(dataETI, false);
         series[3].setData(data18, false);
         series[4].setData(data13AZT, false);
+        series[5].setData(dataSlitter, false);
         chart.redraw();
       }
 
@@ -273,7 +282,8 @@
           { ref: database.ref('13Nilpeter/currentSpeed'), name: '13 Nilpeter', distanceRef: database.ref('13Nilpeter/totalDistance') },
           { ref: database.ref('ETI/currentSpeed'), name: 'ETI', distanceRef: database.ref('ETI/totalDistance') },
           { ref: database.ref('18AZT/currentSpeed'), name: '18 Aztech', distanceRef: database.ref('18AZT/totalDistance') },
-          { ref: database.ref('13AZT/currentSpeed'), name: '13 Aztech', distanceRef: database.ref('13AZT/totalDistance') }
+          { ref: database.ref('13AZT/currentSpeed'), name: '13 Aztech', distanceRef: database.ref('13AZT/totalDistance') },
+          { ref: database.ref('Slitter/currentSpeed'), name: 'Slitter', distanceRef: database.ref('Slitter/totalDistance') }
         ];
 
         const speedPromises = speedRefs.map(speedRef => {
@@ -313,7 +323,8 @@
                              speedData.name === '13 Nilpeter' ? '#32CD32' :
                              speedData.name === 'ETI' ? '#800080' :
                              speedData.name === '18 Aztech' ? '#FFA500' :
-                             '#FF4500'; // OrangeRed color for 13 Aztech
+                             speedData.name === '13 Aztech' ? '#FF4500' :
+                             '#0000FF'; // Blue color for Slitter
           const speedDiv = document.createElement('div');
           speedDiv.innerHTML = `<span class="press-name" style="color: ${pressColor};">${speedData.name}</span><span class="${speedClass}">${speedData.speed}</span>`;
           speedContainer.appendChild(speedDiv);
