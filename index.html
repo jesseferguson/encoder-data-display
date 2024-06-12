@@ -16,13 +16,21 @@
       margin: 0;
       padding: 0;
       height: 100%;
+      display: flex;
+      flex-direction: column;
     }
     #container {
       width: 100%;
-      height: 60vh; /* Make the chart take up 60% of the screen height */
+      height: 70vh; /* Adjust the height to fit everything on one page */
+    }
+    .total-footage {
+      font-size: 36px;
+      font-weight: bold;
+      text-align: center;
+      margin: 10px 0;
     }
     .current-speed {
-      margin-top: 20px;
+      margin-top: 10px;
       display: flex;
       justify-content: space-around;
       flex-wrap: wrap;
@@ -34,18 +42,23 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      text-align: center; /* Center text within each div */
     }
     .current-speed span {
       font-size: 48px; /* Keep the speed box bigger */
       padding: 10px 20px;
       border-radius: 5px;
       font-weight: bold;
-      display: inline-block;
       width: 150px;
       text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
     .current-speed .press-name {
-      font-size: 16px; /* Make the press name smaller */
+      font-size: 20px; /* Make the press name bigger and more readable */
+      display: block; /* Ensure it stays on one line */
+      white-space: nowrap; /* Prevent text wrapping */
     }
     .current-speed span.red {
       background-color: red;
@@ -71,6 +84,7 @@
   </style>
 </head>
 <body>
+  <div class="total-footage" id="totalFootage">Total Footage: 0</div>
   <div id="container"></div>
   <div id="speedContainer" class="current-speed"></div>
 
@@ -128,7 +142,7 @@
             }, {
               from: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 16),
               to: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + 1, 5),
-              color: 'rgba(0, 0, 0, 0.1)',
+              color: 'rgba(0, 0, 0, 0.1)', // Light background for 2nd shift
               label: {
                 text: '2nd Shift',
                 style: {
@@ -183,8 +197,8 @@
 
       // Function to adjust timestamp by subtracting 4 hours
       function adjustTimestamp(timestamp) {
-        const date = new Date(timestamp);
-        date.setHours(date.getHours() - 4); // Subtract 4 hours
+        const date = new Date(timestamp.replace(' ', 'T') + 'Z');
+        date.setUTCHours(date.getUTCHours() - 4); // Subtract 4 hours
         return date.getTime();
       }
 
@@ -237,15 +251,7 @@
             updateChart(data17, data13, dataETI, data18, data13AZT);
           }
 
-          const totalDistances = [
-            { name: '17 Nilpeter', distance: data17[data17.length - 1][1] },
-            { name: '13 Nilpeter', distance: data13[data13.length - 1][1] },
-            { name: 'ETI', distance: dataETI[dataETI.length - 1][1] },
-            { name: '18 Aztech', distance: data18[data18.length - 1][1] },
-            { name: '13 Aztech', distance: data13AZT[data13AZT.length - 1][1] }
-          ];
-
-          updateSpeedDisplay(totalDistances);
+          fetchCurrentSpeeds();
         });
       }
 
@@ -260,54 +266,65 @@
         chart.redraw();
       }
 
-      // Function to update the speed display dynamically
-      function updateSpeedDisplay(distances) {
-        const speedContainer = document.getElementById('speedContainer');
-        speedContainer.innerHTML = ''; // Clear the container
-
-        // Sort speeds in descending order
-        distances.sort((a, b) => b.distance - a.distance);
-
-        // Create elements for each speed and append to the container
-        distances.forEach((distanceData) => {
-          const speedClass = distanceData.speed === 0 ? 'red' :
-                             distanceData.speed < 100 ? 'orange' :
-                             distanceData.speed < 200 ? 'yellow' :
-                             distanceData.speed < 300 ? 'green' :
-                             'gif';
-          const pressColor = distanceData.name === '17 Nilpeter' ? '#1E90FF' :
-                             distanceData.name === '13 Nilpeter' ? '#32CD32' :
-                             distanceData.name === 'ETI' ? '#800080' :
-                             distanceData.name === '18 Aztech' ? '#FFA500' :
-                             '#FF4500'; // OrangeRed color for 13 Aztech
-          const speedDiv = document.createElement('div');
-          speedDiv.innerHTML = `<span class="press-name" style="color: ${pressColor};">${distanceData.name}</span><span class="${speedClass}">${distanceData.speed}</span>`;
-          speedContainer.appendChild(speedDiv);
-        });
-      }
-
       // Function to fetch current speeds and update the display
       function fetchCurrentSpeeds() {
         const speedRefs = [
-          { ref: database.ref('17Nilpeter/currentSpeed'), name: '17 Nilpeter' },
-          { ref: database.ref('13Nilpeter/currentSpeed'), name: '13 Nilpeter' },
-          { ref: database.ref('ETI/currentSpeed'), name: 'ETI' },
-          { ref: database.ref('18AZT/currentSpeed'), name: '18 Aztech' },
-          { ref: database.ref('13AZT/currentSpeed'), name: '13 Aztech' }
+          { ref: database.ref('17Nilpeter/currentSpeed'), name: '17 Nilpeter', distanceRef: database.ref('17Nilpeter/totalDistance') },
+          { ref: database.ref('13Nilpeter/currentSpeed'), name: '13 Nilpeter', distanceRef: database.ref('13Nilpeter/totalDistance') },
+          { ref: database.ref('ETI/currentSpeed'), name: 'ETI', distanceRef: database.ref('ETI/totalDistance') },
+          { ref: database.ref('18AZT/currentSpeed'), name: '18 Aztech', distanceRef: database.ref('18AZT/totalDistance') },
+          { ref: database.ref('13AZT/currentSpeed'), name: '13 Aztech', distanceRef: database.ref('13AZT/totalDistance') }
         ];
 
         const speedPromises = speedRefs.map(speedRef => {
           return new Promise((resolve) => {
             speedRef.ref.on('value', (snapshot) => {
-              const data = snapshot.val();
-              resolve({ name: speedRef.name, speed: data });
+              const speed = snapshot.val();
+              speedRef.distanceRef.on('value', (distanceSnapshot) => {
+                const totalDistance = distanceSnapshot.val();
+                resolve({ name: speedRef.name, speed: speed, totalDistance: totalDistance });
+              });
             });
           });
         });
 
         Promise.all(speedPromises).then(speeds => {
           updateSpeedDisplay(speeds);
+          updateTotalFootage(speeds);
         });
+      }
+
+      // Function to update the speed display dynamically
+      function updateSpeedDisplay(speeds) {
+        const speedContainer = document.getElementById('speedContainer');
+        speedContainer.innerHTML = ''; // Clear the container
+
+        // Sort by total distance in descending order
+        speeds.sort((a, b) => b.totalDistance - a.totalDistance);
+
+        // Create elements for each speed and append to the container
+        speeds.forEach((speedData) => {
+          const speedClass = speedData.speed === 0 ? 'red' :
+                             speedData.speed < 100 ? 'orange' :
+                             speedData.speed < 200 ? 'yellow' :
+                             speedData.speed < 300 ? 'green' :
+                             'gif';
+          const pressColor = speedData.name === '17 Nilpeter' ? '#1E90FF' :
+                             speedData.name === '13 Nilpeter' ? '#32CD32' :
+                             speedData.name === 'ETI' ? '#800080' :
+                             speedData.name === '18 Aztech' ? '#FFA500' :
+                             '#FF4500'; // OrangeRed color for 13 Aztech
+          const speedDiv = document.createElement('div');
+          speedDiv.innerHTML = `<span class="press-name" style="color: ${pressColor};">${speedData.name}</span><span class="${speedClass}">${speedData.speed}</span>`;
+          speedContainer.appendChild(speedDiv);
+        });
+      }
+
+      // Function to update the total footage
+      function updateTotalFootage(speeds) {
+        const totalFootage = speeds.reduce((acc, speedData) => acc + speedData.totalDistance, 0);
+        const totalFootageElement = document.getElementById('totalFootage');
+        totalFootageElement.textContent = `Total Footage: ${totalFootage.toLocaleString()}`;
       }
 
       fetchData();
