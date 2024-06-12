@@ -1,493 +1,319 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-  <title>Realtime Data Chart</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shift Data Chart</title>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
   <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.0.0"></script>
+  <script src="https://code.highcharts.com/highcharts.js"></script>
+  <script src="https://code.highcharts.com/modules/series-label.js"></script>
+  <script src="https://code.highcharts.com/modules/exporting.js"></script>
+  <script src="https://code.highcharts.com/modules/export-data.js"></script>
+  <script src="https://code.highcharts.com/modules/accessibility.js"></script>
   <style>
-    #dataChart {
-      margin-top: 20px;
-      width: 70%;
-      height: auto;
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
     }
-
-    #dataDisplay {
+    #container {
+      width: 100%;
+      height: 60vh; /* Make the chart take up 60% of the screen height */
+    }
+    .current-speed {
+      margin-top: 20px;
       display: flex;
       justify-content: space-around;
-      margin-top: 20px;
+      flex-wrap: wrap;
     }
-
-    .dataBlock {
-      text-align: center;
-      padding: 10px;
-      border: 2px solid #ddd;
-      border-radius: 8px;
-      width: 18%;
-      transition: transform 0.3s;
-    }
-
-    .dataBlock:hover {
-      transform: scale(1.05);
-    }
-
-    .dataBlock h2 {
-      margin: 0;
-    }
-
-    .dataBlock .speed {
-      font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    .current-speed div {
+      margin-bottom: 10px;
       font-size: 24px;
       font-weight: bold;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
-
-    .rank-1 {
-      background-color: gold;
-    }
-
-    .rank-2 {
-      background-color: silver;
-    }
-
-    .rank-3 {
-      background-color: bronze;
-    }
-
-    #options {
-      margin-top: 20px;
-    }
-
-    .badge {
+    .current-speed span {
+      font-size: 48px; /* Keep the speed box bigger */
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-weight: bold;
       display: inline-block;
-      padding: 0.25em 0.4em;
-      font-size: 75%;
-      font-weight: 700;
-      line-height: 1;
+      width: 150px;
       text-align: center;
-      white-space: nowrap;
-      vertical-align: baseline;
-      border-radius: 0.375rem;
-      margin-left: 5px;
     }
-
-    .badge-1 {
-      background-color: #ffd700;
-      color: #fff;
+    .current-speed .press-name {
+      font-size: 16px; /* Make the press name smaller */
     }
-
-    .badge-2 {
-      background-color: #c0c0c0;
-      color: #fff;
+    .current-speed span.red {
+      background-color: red;
+      color: white;
     }
-
-    .badge-3 {
-      background-color: #cd7f32;
-      color: #fff;
+    .current-speed span.orange {
+      background-color: orange;
+      color: white;
+    }
+    .current-speed span.yellow {
+      background-color: yellow;
+      color: black;
+    }
+    .current-speed span.green {
+      background-color: green;
+      color: white;
+    }
+    .current-speed span.gif {
+      background-image: url('https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExcmgwdmVydm1kNzBtNXhuYmJuNnl0eTYyZW94ajNsemw1Nnhyd3FnMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/da6Pwym8AaP5GlQd7W/giphy-downsized-large.gif');
+      background-size: cover;
+      color: white;
     }
   </style>
 </head>
-
 <body>
-  <h3>Total Footage: <span id="totalFootage">0</span></h3>
-  <div id="options">
-    <select id="timeRange">
-      <option value="day">Today</option>
-      <option value="week">Last Week</option>
-      <option value="month">Last Month</option>
-    </select>
-    <button id="refreshButton">Refresh Data</button>
-    <button id="toggleNoiseButton">Toggle Noise Reduction</button>
-  </div>
-
-  <canvas id="dataChart"></canvas>
-
-  <div id="dataDisplay">
-    <!-- Data blocks will be inserted here dynamically -->
-  </div>
-
-  <div id="speedAlert" style="display: none;">
-    <img src="https://example.com/alert.gif" alt="Speed Alert" />
-  </div>
+  <div id="container"></div>
+  <div id="speedContainer" class="current-speed"></div>
 
   <script>
-    // Your web app's Firebase configuration
-    var firebaseConfig = {
-      authDomain: "realtime-database-8bbe2.com",
-      databaseURL: "https://realtime-database-8bbe2-default-rtdb.firebaseio.com",
-      projectId: "realtime-database-8bbe2",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-    };
-    // Initialize Firebase
-    firebase.initializeApp(firebaseConfig);
+    document.addEventListener("DOMContentLoaded", function() {
+      // Firebase configuration
+      const firebaseConfig = {
+        apiKey: "YOUR_API_KEY", // Add your API key here
+        authDomain: "realtime-database-8bbe2.com",
+        databaseURL: "https://realtime-database-8bbe2-default-rtdb.firebaseio.com",
+        projectId: "realtime-database-8bbe2",
+        storageBucket: "YOUR_PROJECT_ID.appspot.com", // Replace with your actual storage bucket ID if available
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // Add your messaging sender ID if available
+        appId: "YOUR_APP_ID" // Add your app ID if available
+      };
 
-    // References to your data
-    var hourlyDataRefs = {
-      '17Nilpeter': firebase.database().ref('17Nilpeter_hourlyData'),
-      'ETI': firebase.database().ref('ETI_hourlyData'),
-      '18AZT': firebase.database().ref('18AZT_hourlyData'),
-      '13Nilpeter': firebase.database().ref('13Nilpeter_hourlyData'),
-      '13AZT': firebase.database().ref('13AZT_hourlyData')
-    };
+      // Initialize Firebase
+      firebase.initializeApp(firebaseConfig);
+      const database = firebase.database();
 
-    var currentSpeedRefs = {
-      '17Nilpeter': firebase.database().ref('17Nilpeter/currentSpeed'),
-      'ETI': firebase.database().ref('ETI/currentSpeed'),
-      '18AZT': firebase.database().ref('18AZT/currentSpeed'),
-      '13Nilpeter': firebase.database().ref('13Nilpeter/currentSpeed'),
-      '13AZT': firebase.database().ref('13AZT/currentSpeed')
-    };
+      let chart;
 
-    var totalDistanceRefs = {
-      '17Nilpeter': firebase.database().ref('17Nilpeter/totalDistance'),
-      'ETI': firebase.database().ref('ETI/totalDistance'),
-      '18AZT': firebase.database().ref('18AZT/totalDistance'),
-      '13Nilpeter': firebase.database().ref('13Nilpeter/totalDistance'),
-      '13AZT': firebase.database().ref('13AZT/totalDistance')
-    };
-
-    var noiseReduction = false;
-    var selectedTimeRange = 'day'; // Default to today
-
-    // Initialize Chart
-    var ctx = document.getElementById('dataChart').getContext('2d');
-    var dataChart = new Chart(ctx, {
-      type: 'line',
-      data: {
-        labels: [],
-        datasets: [
-          {
-            label: 'Minute Distance (17 Nilpeter)',
-            data: [],
-            borderColor: 'rgba(255, 99, 132, 1)',
-            borderWidth: 3.5,
-            fill: false,
-            pointRadius: 0
+      // Function to render the chart
+      function renderChart(data17, data13, dataETI, data18, data13AZT) {
+        chart = Highcharts.chart('container', {
+          chart: {
+            type: 'line'
           },
-          {
-            label: 'Minute Distance (ETI)',
-            data: [],
-            borderColor: 'rgba(54, 162, 235, 1)',
-            borderWidth: 3.5,
-            fill: false,
-            pointRadius: 0
+          title: {
+            text: 'Press Type and Total Distance Over Time'
           },
-          {
-            label: 'Minute Distance (18 Aztech)',
-            data: [],
-            borderColor: 'rgba(255, 159, 64, 1)', // Darker color
-            borderWidth: 3.5,
-            fill: false,
-            pointRadius: 0
-          },
-          {
-            label: 'Minute Distance (13 Nilpeter)',
-            data: [],
-            borderColor: 'rgba(75, 192, 192, 1)',
-            borderWidth: 3.5,
-            fill: false,
-            pointRadius: 0
-          },
-          {
-            label: 'Minute Distance (13 Aztech)',
-            data: [],
-            borderColor: 'rgba(153, 102, 255, 1)',
-            borderWidth: 3.5,
-            fill: false,
-            pointRadius: 0
-          }
-        ]
-      },
-      options: {
-        plugins: {
-          annotation: {
-            annotations: [
-              {
-                type: 'box',
-                xMin: new Date().setHours(6, 0, 0, 0),
-                xMax: new Date().setHours(16, 0, 0, 0),
-                backgroundColor: 'rgba(75, 192, 192, 0.1)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 1,
-                label: {
-                  content: '1st Shift',
-                  enabled: true,
-                  position: 'start'
-                }
-              },
-              {
-                type: 'box',
-                xMin: new Date().setHours(16, 0, 0, 0),
-                xMax: new Date().setHours(2, 30, 0, 0),
-                backgroundColor: 'rgba(255, 159, 64, 0.1)',
-                borderColor: 'rgba(255, 159, 64, 1)',
-                borderWidth: 1,
-                label: {
-                  content: '2nd Shift',
-                  enabled: true,
-                  position: 'start'
+          xAxis: {
+            type: 'datetime',
+            title: {
+              text: 'Time'
+            },
+            tickInterval: 3600 * 1000, // One hour interval
+            labels: {
+              formatter: function() {
+                return Highcharts.dateFormat('%I:%M %p', this.value);
+              }
+            },
+            min: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 5),
+            max: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + 1, 5),
+            plotBands: [{
+              from: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 5),
+              to: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 16),
+              color: 'rgba(68, 170, 213, 0.2)',
+              label: {
+                text: '1st Shift',
+                style: {
+                  color: '#606060'
                 }
               }
-            ]
-          }
-        },
-        scales: {
-          x: {
-            type: 'time',
-            time: {
-              unit: 'minute',
-              stepSize: 30,
-              tooltipFormat: 'HH:mm'
-            },
-            ticks: {
-              autoSkip: true,
-              maxTicksLimit: 24
+            }, {
+              from: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 16),
+              to: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + 1, 5),
+              color: 'rgba(0, 0, 0, 0.1)',
+              label: {
+                text: '2nd Shift',
+                style: {
+                  color: '#606060'
+                }
+              }
+            }]
+          },
+          yAxis: {
+            title: {
+              text: 'Total Distance'
             }
-          }
-        }
-      }
-    });
-
-    function updateChart(snapshotData, cutoff) {
-      var labels = [];
-      var data17Nilpeter = [];
-      var dataETI = [];
-      var dataAZT = [];
-      var data13Nilpeter = [];
-      var data13AZT = [];
-
-      snapshotData['17Nilpeter'].forEach(function (childSnapshot) {
-        var dataPoint = childSnapshot.val();
-        var timestamp = new Date(dataPoint.timestamp);
-        if (timestamp >= cutoff) {
-          var localTime = convertUTCToLocalTime(timestamp);
-          data17Nilpeter.push({ x: localTime, y: dataPoint.minuteDistance });
-        }
-      });
-
-      snapshotData['ETI'].forEach(function (childSnapshot) {
-        var dataPoint = childSnapshot.val();
-        var timestamp = new Date(dataPoint.timestamp);
-        if (timestamp >= cutoff) {
-          var localTime = convertUTCToLocalTime(timestamp);
-          dataETI.push({ x: localTime, y: dataPoint.minuteDistance });
-        }
-      });
-
-      snapshotData['18AZT'].forEach(function (childSnapshot) {
-        var dataPoint = childSnapshot.val();
-        var timestamp = new Date(dataPoint.timestamp);
-        if (timestamp >= cutoff) {
-          var localTime = convertUTCToLocalTime(timestamp);
-          dataAZT.push({ x: localTime, y: dataPoint.minuteDistance });
-        }
-      });
-
-      snapshotData['13Nilpeter'].forEach(function (childSnapshot) {
-        var dataPoint = childSnapshot.val();
-        var timestamp = new Date(dataPoint.timestamp);
-        if (timestamp >= cutoff) {
-          var localTime = convertUTCToLocalTime(timestamp);
-          data13Nilpeter.push({ x: localTime, y: dataPoint.minuteDistance });
-        }
-      });
-
-      snapshotData['13AZT'].forEach(function (childSnapshot) {
-        var dataPoint = childSnapshot.val();
-        var timestamp = new Date(dataPoint.timestamp);
-        if (timestamp >= cutoff) {
-          var localTime = convertUTCToLocalTime(timestamp);
-          data13AZT.push({ x: localTime, y: dataPoint.minuteDistance });
-        }
-      });
-
-      labels = [...new Set(data17Nilpeter.map(dp => dp.x).concat(dataETI.map(dp => dp.x), dataAZT.map(dp => dp.x), data13Nilpeter.map(dp => dp.x), data13AZT.map(dp => dp.x)))].sort((a, b) => a - b);
-
-      if (noiseReduction) {
-        data17Nilpeter = reduceNoise(data17Nilpeter);
-        dataETI = reduceNoise(dataETI);
-        dataAZT = reduceNoise(dataAZT);
-        data13Nilpeter = reduceNoise(data13Nilpeter);
-        data13AZT = reduceNoise(data13AZT);
-      }
-
-      dataChart.data.labels = labels;
-      dataChart.data.datasets[0].data = data17Nilpeter;
-      dataChart.data.datasets[1].data = dataETI;
-      dataChart.data.datasets[2].data = dataAZT;
-      dataChart.data.datasets[3].data = data13Nilpeter;
-      dataChart.data.datasets[4].data = data13AZT;
-      dataChart.update();
-    }
-
-    function reduceNoise(data) {
-      var smoothedData = [];
-      var windowSize = 5; // Change this to adjust the smoothing effect
-
-      for (var i = 0; i < data.length; i++) {
-        var start = Math.max(0, i - Math.floor(windowSize / 2));
-        var end = Math.min(data.length, i + Math.floor(windowSize / 2) + 1);
-        var sum = 0;
-
-        for (var j = start; j < end; j++) {
-          sum += data[j].y;
-        }
-
-        smoothedData.push({ x: data[i].x, y: sum / (end - start) });
-      }
-
-      return smoothedData;
-    }
-
-    function convertUTCToLocalTime(date) {
-      return new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-    }
-
-    function fetchData(timeRange) {
-      selectedTimeRange = timeRange; // Update the selected time range
-      var now = new Date();
-      var cutoff = new Date();
-      if (timeRange === 'day') {
-        cutoff.setHours(5, 0, 0, 0);
-        now.setHours(5, 0, 0, 0);
-        now.setDate(now.getDate() + 1);
-        dataChart.options.scales.x.time.unit = 'hour';
-      } else if (timeRange === 'week') {
-        cutoff.setDate(now.getDate() - 7);
-        dataChart.options.scales.x.time.unit = 'day';
-      } else if (timeRange === 'month') {
-        cutoff.setMonth(now.getMonth() - 1);
-        dataChart.options.scales.x.time.unit = 'day';
-      }
-
-      dataChart.options.scales.x.min = cutoff;
-      dataChart.options.scales.x.max = now;
-      dataChart.update();
-
-      console.log("Cutoff date: ", cutoff);
-
-      var dataPromises = Object.keys(hourlyDataRefs).map(key => hourlyDataRefs[key].once('value').then(snapshot => ({ key, snapshot })));
-
-      Promise.all(dataPromises).then(results => {
-        var snapshotData = {};
-        results.forEach(result => {
-          if (result.snapshot.exists()) {
-            snapshotData[result.key] = result.snapshot;
-          } else {
-            console.error(`No data available for ${result.key}.`);
-          }
-        });
-        updateChart(snapshotData, cutoff);
-      }).catch(function (error) {
-        console.error("Error fetching data: ", error);
-      });
-
-      var speedPromises = Object.keys(currentSpeedRefs).map(key => currentSpeedRefs[key].once('value').then(snapshot => ({ key, snapshot })));
-      var distancePromises = Object.keys(totalDistanceRefs).map(key => totalDistanceRefs[key].once('value').then(snapshot => ({ key, snapshot })));
-
-      Promise.all(speedPromises).then(results => {
-        results.forEach(result => {
-          if (result.snapshot.exists()) {
-            $(`#${result.key}Speed`).text(formatNumber(result.snapshot.val()));
-          } else {
-            console.error(`No current speed data available for ${result.key}.`);
-          }
-        });
-      }).catch(function (error) {
-        console.error("Error fetching current speeds: ", error);
-      });
-
-      Promise.all(distancePromises).then(results => {
-        var presses = results.map(result => {
-          return {
-            id: result.key,
-            totalDistance: result.snapshot.exists() ? result.snapshot.val() : 0
-          };
-        });
-
-        // Sort presses by total distance
-        presses.sort((a, b) => b.totalDistance - a.totalDistance);
-
-        // Clear existing data blocks
-        $('#dataDisplay').empty();
-
-        // Display presses with ranking
-        presses.forEach((press, index) => {
-          var rankClass = index < 3 ? `rank-${index + 1}` : '';
-          var badgeClass = index < 3 ? `badge-${index + 1}` : '';
-          var badge = index < 3 ? `<span class="badge ${badgeClass}">${index + 1}</span>` : '';
-
-          $('#dataDisplay').append(`
-            <div class="dataBlock ${rankClass}">
-              <h2>${press.id} ${badge}</h2>
-              <div class="speed"><span id="${press.id}Speed">0</span></div>
-              <div>Total Distance: <span id="${press.id}TotalDistance">${formatNumber(press.totalDistance)}</span></div>
-            </div>
-          `);
-        });
-
-        var totalFootage = presses.reduce((acc, press) => acc + press.totalDistance, 0);
-        $('#totalFootage').text(formatNumber(totalFootage));
-      }).catch(function (error) {
-        console.error("Error fetching total distances: ", error);
-      });
-    }
-
-    function formatNumber(num) {
-      return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    }
-
-    function listenForRealtimeUpdates() {
-      Object.keys(hourlyDataRefs).forEach(key => {
-        hourlyDataRefs[key].on('child_added', function (snapshot) {
-          fetchData(selectedTimeRange); // Use the selected time range
-        });
-      });
-
-      Object.keys(currentSpeedRefs).forEach(key => {
-        currentSpeedRefs[key].on('value', function (snapshot) {
-          if (snapshot.exists()) {
-            var currentSpeed = snapshot.val();
-            console.log(`${key} Current Speed: `, currentSpeed); // Debugging
-            $(`#${key}Speed`).text(formatNumber(currentSpeed));
-            if (currentSpeed > 350) {
-              $('#speedAlert').show();
-            } else {
-              $('#speedAlert').hide();
+          },
+          tooltip: {
+            formatter: function() {
+              return '<b>Press Type: ' + this.series.name + '</b><br/>' +
+                     'Total Distance: ' + this.y + '<br/>' +
+                     'Time: ' + Highcharts.dateFormat('%I:%M %p', this.x);
             }
+          },
+          plotOptions: {
+            series: {
+              lineWidth: 6, // Increase the line width
+              marker: {
+                radius: 8 // Increase the marker radius
+              }
+            }
+          },
+          series: [{
+            name: '17 Nilpeter',
+            data: data17,
+            color: '#1E90FF' // Blue color for 17 Nilpeter
+          }, {
+            name: '13 Nilpeter',
+            data: data13,
+            color: '#32CD32' // Lime green color for 13 Nilpeter
+          }, {
+            name: 'ETI',
+            data: dataETI,
+            color: '#800080' // Purple color for ETI
+          }, {
+            name: '18 Aztech',
+            data: data18,
+            color: '#FFA500' // Orange color for 18 Aztech
+          }, {
+            name: '13 Aztech',
+            data: data13AZT,
+            color: '#FF4500' // OrangeRed color for 13 Aztech
+          }]
+        });
+      }
+
+      // Function to adjust timestamp by subtracting 4 hours
+      function adjustTimestamp(timestamp) {
+        const date = new Date(timestamp);
+        date.setHours(date.getHours() - 4); // Subtract 4 hours
+        return date.getTime();
+      }
+
+      // Function to fetch data and update the chart
+      function fetchData() {
+        const ref17 = database.ref('17Nilpeter_hourlyData');
+        const ref13 = database.ref('13Nilpeter_hourlyData');
+        const refETI = database.ref('ETI_hourlyData');
+        const ref18 = database.ref('18AZT_hourlyData');
+        const ref13AZT = database.ref('13AZT_hourlyData');
+        const data17 = [];
+        const data13 = [];
+        const dataETI = [];
+        const data18 = [];
+        const data13AZT = [];
+
+        const fetchDataFromRef = (ref, dataArray, name) => {
+          return new Promise((resolve) => {
+            ref.on('value', (snapshot) => {
+              const rawData = snapshot.val();
+              console.log(`${name} data:`, rawData);
+              dataArray.length = 0; // Clear the array
+              for (const key in rawData) {
+                if (rawData.hasOwnProperty(key)) {
+                  const record = rawData[key];
+                  dataArray.push([adjustTimestamp(record.timestamp), record.totalDistance]);
+                }
+              }
+              resolve();
+            });
+          });
+        };
+
+        Promise.all([
+          fetchDataFromRef(ref17, data17, '17Nilpeter_hourlyData'),
+          fetchDataFromRef(ref13, data13, '13Nilpeter_hourlyData'),
+          fetchDataFromRef(refETI, dataETI, 'ETI_hourlyData'),
+          fetchDataFromRef(ref18, data18, '18AZT_hourlyData'),
+          fetchDataFromRef(ref13AZT, data13AZT, '13AZT_hourlyData')
+        ]).then(() => {
+          console.log("Data for 17 Nilpeter:", data17);
+          console.log("Data for 13 Nilpeter:", data13);
+          console.log("Data for ETI:", dataETI);
+          console.log("Data for 18 Aztech:", data18);
+          console.log("Data for 13 Aztech:", data13AZT);
+
+          if (!chart) {
+            renderChart(data17, data13, dataETI, data18, data13AZT);
           } else {
-            console.error(`No current speed data available for ${key}.`);
+            updateChart(data17, data13, dataETI, data18, data13AZT);
           }
-        });
-      });
 
-      Object.keys(totalDistanceRefs).forEach(key => {
-        totalDistanceRefs[key].on('value', function (snapshot) {
-          if (snapshot.exists()) {
-            $(`#${key}TotalDistance`).text(formatNumber(snapshot.val()));
-          }
-        });
-      });
-    }
+          const totalDistances = [
+            { name: '17 Nilpeter', distance: data17[data17.length - 1][1] },
+            { name: '13 Nilpeter', distance: data13[data13.length - 1][1] },
+            { name: 'ETI', distance: dataETI[dataETI.length - 1][1] },
+            { name: '18 Aztech', distance: data18[data18.length - 1][1] },
+            { name: '13 Aztech', distance: data13AZT[data13AZT.length - 1][1] }
+          ];
 
-    $(document).ready(function () {
-      $('#timeRange').change(function () {
-        fetchData(this.value);
-      });
-      $('#refreshButton').click(function () {
-        fetchData($('#timeRange').val());
-      });
-      $('#toggleNoiseButton').click(function () {
-        noiseReduction = !noiseReduction;
-        fetchData($('#timeRange').val());
-      });
-      fetchData(selectedTimeRange); // Use the selected time range
-      listenForRealtimeUpdates(); // Listen for real-time updates
+          updateSpeedDisplay(totalDistances);
+        });
+      }
+
+      // Function to update the chart without redrawing the lines
+      function updateChart(data17, data13, dataETI, data18, data13AZT) {
+        const series = chart.series;
+        series[0].setData(data17, false);
+        series[1].setData(data13, false);
+        series[2].setData(dataETI, false);
+        series[3].setData(data18, false);
+        series[4].setData(data13AZT, false);
+        chart.redraw();
+      }
+
+      // Function to update the speed display dynamically
+      function updateSpeedDisplay(distances) {
+        const speedContainer = document.getElementById('speedContainer');
+        speedContainer.innerHTML = ''; // Clear the container
+
+        // Sort speeds in descending order
+        distances.sort((a, b) => b.distance - a.distance);
+
+        // Create elements for each speed and append to the container
+        distances.forEach((distanceData) => {
+          const speedClass = distanceData.speed === 0 ? 'red' :
+                             distanceData.speed < 100 ? 'orange' :
+                             distanceData.speed < 200 ? 'yellow' :
+                             distanceData.speed < 300 ? 'green' :
+                             'gif';
+          const pressColor = distanceData.name === '17 Nilpeter' ? '#1E90FF' :
+                             distanceData.name === '13 Nilpeter' ? '#32CD32' :
+                             distanceData.name === 'ETI' ? '#800080' :
+                             distanceData.name === '18 Aztech' ? '#FFA500' :
+                             '#FF4500'; // OrangeRed color for 13 Aztech
+          const speedDiv = document.createElement('div');
+          speedDiv.innerHTML = `<span class="press-name" style="color: ${pressColor};">${distanceData.name}</span><span class="${speedClass}">${distanceData.speed}</span>`;
+          speedContainer.appendChild(speedDiv);
+        });
+      }
+
+      // Function to fetch current speeds and update the display
+      function fetchCurrentSpeeds() {
+        const speedRefs = [
+          { ref: database.ref('17Nilpeter/currentSpeed'), name: '17 Nilpeter' },
+          { ref: database.ref('13Nilpeter/currentSpeed'), name: '13 Nilpeter' },
+          { ref: database.ref('ETI/currentSpeed'), name: 'ETI' },
+          { ref: database.ref('18AZT/currentSpeed'), name: '18 Aztech' },
+          { ref: database.ref('13AZT/currentSpeed'), name: '13 Aztech' }
+        ];
+
+        const speedPromises = speedRefs.map(speedRef => {
+          return new Promise((resolve) => {
+            speedRef.ref.on('value', (snapshot) => {
+              const data = snapshot.val();
+              resolve({ name: speedRef.name, speed: data });
+            });
+          });
+        });
+
+        Promise.all(speedPromises).then(speeds => {
+          updateSpeedDisplay(speeds);
+        });
+      }
+
+      fetchData();
+      setInterval(fetchData, 5000); // Fetch data every 5 seconds
+      setInterval(fetchCurrentSpeeds, 5000); // Fetch current speeds every 5 seconds
     });
   </script>
 </body>
-
 </html>
