@@ -81,17 +81,6 @@
       background-size: cover;
       color: white;
     }
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
-      }
-      to {
-        opacity: 1;
-      }
-    }
-    .animate-number {
-      animation: fadeIn 0.5s ease-in-out;
-    }
   </style>
 </head>
 <body>
@@ -236,7 +225,7 @@
           return new Promise((resolve) => {
             ref.on('value', (snapshot) => {
               const rawData = snapshot.val();
-              console.log(`${name} data:`, rawData);
+              console.log(${name} data:, rawData);
               dataArray.length = 0; // Clear the array
               for (const key in rawData) {
                 if (rawData.hasOwnProperty(key)) {
@@ -318,6 +307,7 @@
       // Function to update the speed display dynamically
       function updateSpeedDisplay(speeds) {
         const speedContainer = document.getElementById('speedContainer');
+        speedContainer.innerHTML = ''; // Clear the container
 
         // Sort by total distance in descending order
         speeds.sort((a, b) => b.totalDistance - a.totalDistance);
@@ -335,22 +325,9 @@
                              speedData.name === '18 Aztech' ? '#FFA500' :
                              speedData.name === '13 Aztech' ? '#FF4500' :
                              '#0000FF'; // Blue color for Slitter
-          let speedDiv = document.querySelector(`div[data-name="${speedData.name}"]`);
-          if (!speedDiv) {
-            speedDiv = document.createElement('div');
-            speedDiv.setAttribute('data-name', speedData.name);
-            speedDiv.innerHTML = `<span class="press-name" style="color: ${pressColor};">${speedData.name}</span><span class="${speedClass}">${speedData.speed}</span>`;
-            speedContainer.appendChild(speedDiv);
-          } else {
-            const speedSpan = speedDiv.querySelector('span:last-child');
-            if (speedSpan.textContent != speedData.speed) {
-              speedSpan.classList.add('animate-number');
-              speedSpan.textContent = speedData.speed;
-              setTimeout(() => {
-                speedSpan.classList.remove('animate-number');
-              }, 500);
-            }
-          }
+          const speedDiv = document.createElement('div');
+          speedDiv.innerHTML = <span class="press-name" style="color: ${pressColor};">${speedData.name}</span><span class="${speedClass}">${speedData.speed}</span>;
+          speedContainer.appendChild(speedDiv);
         });
       }
 
@@ -358,7 +335,7 @@
       function updateTotalFootage(speeds) {
         const totalFootage = speeds.reduce((acc, speedData) => acc + speedData.totalDistance, 0);
         const totalFootageElement = document.getElementById('totalFootage');
-        totalFootageElement.textContent = `Total Footage: ${totalFootage.toLocaleString()}`;
+        totalFootageElement.textContent = Total Footage: ${totalFootage.toLocaleString()};
       }
 
       fetchData();
