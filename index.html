@@ -82,21 +82,6 @@
       background-size: cover;
       color: white;
     }
-    @keyframes rollIn {
-      0% {
-        transform: translateY(-100%);
-      }
-      50% {
-        transform: translateY(0);
-      }
-      100% {
-        transform: translateY(100%);
-      }
-    }
-    .animate-number {
-      display: inline-block;
-      animation: rollIn 0.5s ease-in-out;
-    }
   </style>
 </head>
 <body>
@@ -349,16 +334,9 @@
           } else {
             const speedSpan = speedDiv.querySelector('span:last-child');
             if (speedSpan.textContent != speedData.speed) {
-              const newSpan = document.createElement('span');
-              newSpan.className = `${speedClass} animate-number`;
-              newSpan.textContent = speedData.speed;
-              speedSpan.replaceWith(newSpan);
-              setTimeout(() => {
-                newSpan.classList.remove('animate-number');
-              }, 500);
-            } else {
-              speedSpan.className = `${speedClass}`;
+              speedSpan.textContent = speedData.speed;
             }
+            speedSpan.className = `${speedClass}`;
           }
         });
       }
