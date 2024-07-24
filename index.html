@@ -343,10 +343,13 @@
             speedContainer.appendChild(speedDiv);
           } else {
             const speedSpan = speedDiv.querySelector('span:last-child');
-            speedSpan.classList.remove('animate-number');
-            void speedSpan.offsetWidth; // Trigger reflow
-            speedSpan.textContent = speedData.speed;
-            speedSpan.classList.add('animate-number');
+            if (speedSpan.textContent != speedData.speed) {
+              speedSpan.classList.add('animate-number');
+              speedSpan.textContent = speedData.speed;
+              setTimeout(() => {
+                speedSpan.classList.remove('animate-number');
+              }, 500);
+            }
           }
         });
       }
