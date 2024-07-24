@@ -81,22 +81,16 @@
       background-size: cover;
       color: white;
     }
-    @keyframes change {
-      0% {
+    @keyframes fadeIn {
+      from {
         opacity: 0;
-        transform: translateY(-10px);
       }
-      50% {
+      to {
         opacity: 1;
-        transform: translateY(0);
-      }
-      100% {
-        opacity: 0;
-        transform: translateY(10px);
       }
     }
     .animate-number {
-      animation: change 0.5s;
+      animation: fadeIn 0.5s ease-in-out;
     }
   </style>
 </head>
@@ -324,7 +318,6 @@
       // Function to update the speed display dynamically
       function updateSpeedDisplay(speeds) {
         const speedContainer = document.getElementById('speedContainer');
-        speedContainer.innerHTML = ''; // Clear the container
 
         // Sort by total distance in descending order
         speeds.sort((a, b) => b.totalDistance - a.totalDistance);
@@ -342,16 +335,19 @@
                              speedData.name === '18 Aztech' ? '#FFA500' :
                              speedData.name === '13 Aztech' ? '#FF4500' :
                              '#0000FF'; // Blue color for Slitter
-          const speedDiv = document.createElement('div');
-          speedDiv.innerHTML = `<span class="press-name" style="color: ${pressColor};">${speedData.name}</span><span class="${speedClass}">${speedData.speed}</span>`;
-          speedContainer.appendChild(speedDiv);
-
-          // Add animation class to the number
-          const speedSpan = speedDiv.querySelector('span:last-child');
-          speedSpan.classList.add('animate-number');
-          setTimeout(() => {
+          let speedDiv = document.querySelector(`div[data-name="${speedData.name}"]`);
+          if (!speedDiv) {
+            speedDiv = document.createElement('div');
+            speedDiv.setAttribute('data-name', speedData.name);
+            speedDiv.innerHTML = `<span class="press-name" style="color: ${pressColor};">${speedData.name}</span><span class="${speedClass}">${speedData.speed}</span>`;
+            speedContainer.appendChild(speedDiv);
+          } else {
+            const speedSpan = speedDiv.querySelector('span:last-child');
             speedSpan.classList.remove('animate-number');
-          }, 500); // Remove class after animation duration
+            void speedSpan.offsetWidth; // Trigger reflow
+            speedSpan.textContent = speedData.speed;
+            speedSpan.classList.add('animate-number');
+          }
         });
       }
 
