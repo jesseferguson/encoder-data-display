@@ -82,16 +82,20 @@
       background-size: cover;
       color: white;
     }
-    @keyframes fadeIn {
-      from {
-        opacity: 0;
+    @keyframes rollIn {
+      0% {
+        transform: translateY(-100%);
       }
-      to {
-        opacity: 1;
+      50% {
+        transform: translateY(0);
+      }
+      100% {
+        transform: translateY(100%);
       }
     }
     .animate-number {
-      animation: fadeIn 0.5s ease-in-out;
+      display: inline-block;
+      animation: rollIn 0.5s ease-in-out;
     }
   </style>
 </head>
@@ -341,4 +345,35 @@
             speedDiv = document.createElement('div');
             speedDiv.setAttribute('data-name', speedData.name);
             speedDiv.innerHTML = `<span class="press-name" style="color: ${pressColor};">${speedData.name}</span><span class="${speedClass}">${speedData.speed}</span>`;
-            speedContainer.appendChild(speedDiv
+            speedContainer.appendChild(speedDiv);
+          } else {
+            const speedSpan = speedDiv.querySelector('span:last-child');
+            if (speedSpan.textContent != speedData.speed) {
+              const newSpan = document.createElement('span');
+              newSpan.className = `${speedClass} animate-number`;
+              newSpan.textContent = speedData.speed;
+              speedSpan.replaceWith(newSpan);
+              setTimeout(() => {
+                newSpan.classList.remove('animate-number');
+              }, 500);
+            } else {
+              speedSpan.className = `${speedClass}`;
+            }
+          }
+        });
+      }
+
+      // Function to update the total footage
+      function updateTotalFootage(speeds) {
+        const totalFootage = speeds.reduce((acc, speedData) => acc + speedData.totalDistance, 0);
+        const totalFootageElement = document.getElementById('totalFootage');
+        totalFootageElement.textContent = `Total Footage: ${totalFootage.toLocaleString()}`;
+      }
+
+      fetchData();
+      setInterval(fetchData, 5000); // Fetch data every 5 seconds
+      setInterval(fetchCurrentSpeeds, 5000); // Fetch current speeds every 5 seconds
+    });
+  </script>
+</body>
+</html>
