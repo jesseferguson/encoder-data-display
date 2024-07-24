@@ -11,7 +11,6 @@
   <script src="https://code.highcharts.com/modules/exporting.js"></script>
   <script src="https://code.highcharts.com/modules/export-data.js"></script>
   <script src="https://code.highcharts.com/modules/accessibility.js"></script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
   <style>
     body, html {
       margin: 0;
@@ -55,7 +54,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      animation-duration: 0.5s;
+      transition: none; /* Disable transitions on the box */
     }
     .current-speed .press-name {
       font-size: 20px; /* Make the press name bigger and more readable */
@@ -83,9 +82,6 @@
       background-size: cover;
       color: white;
     }
-    .animate-number {
-      animation: fadeIn 0.5s ease-in-out;
-    }
     @keyframes fadeIn {
       from {
         opacity: 0;
@@ -93,6 +89,9 @@
       to {
         opacity: 1;
       }
+    }
+    .animate-number {
+      animation: fadeIn 0.5s ease-in-out;
     }
   </style>
 </head>
@@ -342,31 +341,4 @@
             speedDiv = document.createElement('div');
             speedDiv.setAttribute('data-name', speedData.name);
             speedDiv.innerHTML = `<span class="press-name" style="color: ${pressColor};">${speedData.name}</span><span class="${speedClass}">${speedData.speed}</span>`;
-            speedContainer.appendChild(speedDiv);
-          } else {
-            const speedSpan = speedDiv.querySelector('span:last-child');
-            if (speedSpan.textContent != speedData.speed) {
-              speedSpan.classList.add('animate__animated', 'animate__fadeIn');
-              speedSpan.textContent = speedData.speed;
-              setTimeout(() => {
-                speedSpan.classList.remove('animate__animated', 'animate__fadeIn');
-              }, 500);
-            }
-          }
-        });
-      }
-
-      // Function to update the total footage
-      function updateTotalFootage(speeds) {
-        const totalFootage = speeds.reduce((acc, speedData) => acc + speedData.totalDistance, 0);
-        const totalFootageElement = document.getElementById('totalFootage');
-        totalFootageElement.textContent = `Total Footage: ${totalFootage.toLocaleString()}`;
-      }
-
-      fetchData();
-      setInterval(fetchData, 5000); // Fetch data every 5 seconds
-      setInterval(fetchCurrentSpeeds, 5000); // Fetch current speeds every 5 seconds
-    });
-  </script>
-</body>
-</html>
+            speedContainer.appendChild(speedDiv
