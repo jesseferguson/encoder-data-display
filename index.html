@@ -54,7 +54,6 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: transform 0.5s, background-color 0.5s;
     }
     .current-speed .press-name {
       font-size: 20px; /* Make the press name bigger and more readable */
@@ -82,8 +81,22 @@
       background-size: cover;
       color: white;
     }
-    .current-speed span.animate {
-      transform: scale(1.2);
+    @keyframes change {
+      0% {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      50% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+    }
+    .animate-number {
+      animation: change 0.5s;
     }
   </style>
 </head>
@@ -333,11 +346,11 @@
           speedDiv.innerHTML = `<span class="press-name" style="color: ${pressColor};">${speedData.name}</span><span class="${speedClass}">${speedData.speed}</span>`;
           speedContainer.appendChild(speedDiv);
 
-          // Add animation class
+          // Add animation class to the number
           const speedSpan = speedDiv.querySelector('span:last-child');
-          speedSpan.classList.add('animate');
+          speedSpan.classList.add('animate-number');
           setTimeout(() => {
-            speedSpan.classList.remove('animate');
+            speedSpan.classList.remove('animate-number');
           }, 500); // Remove class after animation duration
         });
       }
