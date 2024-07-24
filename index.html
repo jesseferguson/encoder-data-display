@@ -54,6 +54,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: transform 0.5s, background-color 0.5s;
     }
     .current-speed .press-name {
       font-size: 20px; /* Make the press name bigger and more readable */
@@ -80,6 +81,9 @@
       background-image: url('https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExcmgwdmVydm1kNzBtNXhuYmJuNnl0eTYyZW94ajNsemw1Nnhyd3FnMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/da6Pwym8AaP5GlQd7W/giphy-downsized-large.gif');
       background-size: cover;
       color: white;
+    }
+    .current-speed span.animate {
+      transform: scale(1.2);
     }
   </style>
 </head>
@@ -328,6 +332,13 @@
           const speedDiv = document.createElement('div');
           speedDiv.innerHTML = `<span class="press-name" style="color: ${pressColor};">${speedData.name}</span><span class="${speedClass}">${speedData.speed}</span>`;
           speedContainer.appendChild(speedDiv);
+
+          // Add animation class
+          const speedSpan = speedDiv.querySelector('span:last-child');
+          speedSpan.classList.add('animate');
+          setTimeout(() => {
+            speedSpan.classList.remove('animate');
+          }, 500); // Remove class after animation duration
         });
       }
 
