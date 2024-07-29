@@ -18,10 +18,11 @@
       height: 100%;
       display: flex;
       flex-direction: column;
+      font-family: Arial, sans-serif;
     }
     #container {
       width: 100%;
-      height: 70vh; /* Adjust the height to fit everything on one page */
+      height: 70vh;
     }
     .total-footage {
       font-size: 36px;
@@ -42,10 +43,10 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      text-align: center; /* Center text within each div */
+      text-align: center;
     }
     .current-speed span {
-      font-size: 48px; /* Keep the speed box bigger */
+      font-size: 48px;
       padding: 10px 20px;
       border-radius: 5px;
       font-weight: bold;
@@ -54,12 +55,12 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: none; /* Disable transitions on the box */
+      transition: none;
     }
     .current-speed .press-name {
-      font-size: 20px; /* Make the press name bigger and more readable */
-      display: block; /* Ensure it stays on one line */
-      white-space: nowrap; /* Prevent text wrapping */
+      font-size: 20px;
+      display: block;
+      white-space: nowrap;
     }
     .current-speed span.red {
       background-color: red;
@@ -78,280 +79,385 @@
       color: white;
     }
     .current-speed span.gif {
-      background-image: url('https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExcmgwdmVydm1kNzBtNXhuYmJuNnl0eTYyZW94ajNsemw1Nnhyd3FnMSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/da6Pwym8AaP5GlQd7W/giphy-downsized-large.gif');
+      background-image: url('https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExcmgwdmVydm1kNzBtNXhuYmJuNnl0eTYyZW94ajNsemw1Nnhyd3FnMSZlcD12MV9pbnRlcm5faWQmY3Q9Zw/da6Pwym8AaP5GlQd7W/giphy-downsized-large.gif');
       background-size: cover;
       color: white;
+    }
+    .chart-options {
+      display: flex;
+      justify-content: center;
+      margin: 10px 0;
+    }
+    .chart-options button {
+      margin: 0 5px;
+      padding: 10px 20px;
+      font-size: 16px;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background-color: #007bff;
+      color: white;
+      transition: background-color 0.3s;
+    }
+    .chart-options button:hover {
+      background-color: #0056b3;
+    }
+    .chart-options button.active {
+      background-color: #0056b3;
     }
   </style>
 </head>
 <body>
   <div class="total-footage" id="totalFootage">Total Footage: 0</div>
+  <div class="chart-options">
+    <button id="last24HoursBtn" onclick="fetchData('last24Hours')" title="Last 24 Hours">24H</button>
+    <button id="lastMonthBtn" onclick="fetchData('lastMonth')" title="Last Month">1M</button>
+    <button id="lastYearBtn" onclick="fetchData('lastYear')" title="Last Year">1Y</button>
+  </div>
   <div id="container"></div>
   <div id="speedContainer" class="current-speed"></div>
 
   <script>
-    document.addEventListener("DOMContentLoaded", function() {
-      // Firebase configuration
-      const firebaseConfig = {
-        apiKey: "YOUR_API_KEY", // Add your API key here
-        authDomain: "realtime-database-8bbe2.com",
-        databaseURL: "https://realtime-database-8bbe2-default-rtdb.firebaseio.com",
-        projectId: "realtime-database-8bbe2",
-        storageBucket: "YOUR_PROJECT_ID.appspot.com", // Replace with your actual storage bucket ID if available
-        messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // Add your messaging sender ID if available
-        appId: "YOUR_APP_ID" // Add your app ID if available
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "realtime-database-8bbe2.com",
+      databaseURL: "https://realtime-database-8bbe2-default-rtdb.firebaseio.com",
+      projectId: "realtime-database-8bbe2",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    let chart = null;
+
+    // Function to render the chart
+    function renderChart(data17, data13, dataETI, data18, data13AZT, dataSlitter) {
+      chart = Highcharts.chart('container', {
+        chart: {
+          type: 'line'
+        },
+        title: {
+          text: 'Press Type and Total Distance Over Time'
+        },
+        xAxis: {
+          type: 'datetime',
+          title: {
+            text: 'Time'
+          },
+          tickInterval: 3600 * 1000, // One hour interval
+          labels: {
+            formatter: function() {
+              return Highcharts.dateFormat('%I:%M %p', this.value);
+            }
+          },
+          plotBands: [{
+            from: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 5),
+            to: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 16),
+            color: 'rgba(68, 170, 213, 0.2)',
+            label: {
+              text: '1st Shift',
+              style: {
+                color: '#606060'
+              }
+            }
+          }, {
+            from: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 16),
+            to: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + 1, 5),
+            color: 'rgba(0, 0, 0, 0.1)',
+            label: {
+              text: '2nd Shift',
+              style: {
+                color: '#606060'
+              }
+            }
+          }]
+        },
+        yAxis: {
+          title: {
+            text: 'Total Distance'
+          }
+        },
+        tooltip: {
+          formatter: function() {
+            return '<b>Press Type: ' + this.series.name + '</b><br/>' +
+                   'Total Distance: ' + this.y + '<br/>' +
+                   'Time: ' + Highcharts.dateFormat('%I:%M %p', this.x);
+          }
+        },
+        plotOptions: {
+          series: {
+            lineWidth: 6,
+            marker: {
+              enabled: false
+            }
+          }
+        },
+        series: [{
+          name: '17 Nilpeter',
+          data: data17,
+          color: '#1E90FF'
+        }, {
+          name: '13 Nilpeter',
+          data: data13,
+          color: '#32CD32'
+        }, {
+          name: 'ETI',
+          data: dataETI,
+          color: '#800080'
+        }, {
+          name: '18 Aztech',
+          data: data18,
+          color: '#FFA500'
+        }, {
+          name: '13 Aztech',
+          data: data13AZT,
+          color: '#FF4500'
+        }, {
+          name: 'Slitter',
+          data: dataSlitter,
+          color: '#0000FF'
+        }]
+      });
+    }
+
+    // Function to adjust timestamp by subtracting 4 hours and 5 minutes
+    function adjustTimestamp(timestamp) {
+      const date = new Date(timestamp.replace(' ', 'T') + 'Z');
+      date.setUTCHours(date.getUTCHours() - 4);
+      date.setUTCMinutes(date.getUTCMinutes() - 5); // Subtracting 5 minutes
+      return date.getTime();
+    }
+
+    // Function to filter data based on time period and reset to zero
+    function filterDataByPeriod(dataArray, period) {
+      const now = Date.now();
+      let periodStart;
+      switch (period) {
+        case 'last24Hours':
+          periodStart = now - (24 * 60 * 60 * 1000);
+          break;
+        case 'lastMonth':
+          periodStart = now - (30 * 24 * 60 * 60 * 1000);
+          break;
+        case 'lastYear':
+          periodStart = now - (365 * 24 * 60 * 60 * 1000);
+          break;
+        default:
+          periodStart = now - (24 * 60 * 60 * 1000);
+      }
+      const filteredData = dataArray.filter(record => record[0] >= periodStart);
+      if (filteredData.length > 0) {
+        const firstValue = filteredData[0][1];
+        return filteredData.map(record => [record[0], record[1] - firstValue]);
+      }
+      return filteredData;
+    }
+
+    // Function to fetch data and update the chart
+    async function fetchData(period = 'last24Hours') {
+      const ref17 = database.ref('17Nilpeter_yearlyData');
+      const ref13 = database.ref('13Nilpeter_yearlyData');
+      const refETI = database.ref('ETI_yearlyData');
+      const ref18 = database.ref('18AZT_yearlyData');
+      const ref13AZT = database.ref('13AZT_yearlyData');
+      const refSlitter = database.ref('Slitter_yearlyData');
+      const data17 = [];
+      const data13 = [];
+      const dataETI = [];
+      const data18 = [];
+      const data13AZT = [];
+      const dataSlitter = [];
+
+      const fetchDataFromRef = (ref, dataArray, name) => {
+        return new Promise((resolve) => {
+          ref.on('value', (snapshot) => {
+            const rawData = snapshot.val();
+            console.log(`${name} raw data:`, rawData); // Debugging statement
+            dataArray.length = 0;
+            for (const key in rawData) {
+              if (rawData.hasOwnProperty(key)) {
+                const record = rawData[key];
+                const adjustedTimestamp = adjustTimestamp(record.timestamp);
+                const yearlyDistance = record.yearlyDistance; // Corrected property name
+                if (adjustedTimestamp && yearlyDistance !== undefined) {
+                  dataArray.push([adjustedTimestamp, yearlyDistance]);
+                }
+              }
+            }
+            dataArray.sort((a, b) => a[0] - b[0]); // Ensure data is sorted by timestamp
+            console.log(`${name} adjusted data:`, dataArray); // Debugging statement
+            resolve();
+          });
+        });
       };
 
-      // Initialize Firebase
-      firebase.initializeApp(firebaseConfig);
-      const database = firebase.database();
+      await Promise.all([
+        fetchDataFromRef(ref17, data17, '17Nilpeter_yearlyData'),
+        fetchDataFromRef(ref13, data13, '13Nilpeter_yearlyData'),
+        fetchDataFromRef(refETI, dataETI, 'ETI_yearlyData'),
+        fetchDataFromRef(ref18, data18, '18AZT_yearlyData'),
+        fetchDataFromRef(ref13AZT, data13AZT, '13AZT_yearlyData'),
+        fetchDataFromRef(refSlitter, dataSlitter, 'Slitter_yearlyData')
+      ]);
 
-      let chart;
+      console.log("Filtered Data for 17 Nilpeter:", data17); // Debugging statement
+      console.log("Filtered Data for 13 Nilpeter:", data13); // Debugging statement
+      console.log("Filtered Data for ETI:", dataETI); // Debugging statement
+      console.log("Filtered Data for 18 Aztech:", data18); // Debugging statement
+      console.log("Filtered Data for 13 Aztech:", data13AZT); // Debugging statement
+      console.log("Filtered Data for Slitter:", dataSlitter); // Debugging statement
 
-      // Function to render the chart
-      function renderChart(data17, data13, dataETI, data18, data13AZT, dataSlitter) {
-        chart = Highcharts.chart('container', {
-          chart: {
-            type: 'line'
-          },
-          title: {
-            text: 'Press Type and Total Distance Over Time'
-          },
-          xAxis: {
-            type: 'datetime',
-            title: {
-              text: 'Time'
-            },
-            tickInterval: 3600 * 1000, // One hour interval
-            labels: {
-              formatter: function() {
-                return Highcharts.dateFormat('%I:%M %p', this.value);
-              }
-            },
-            min: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 5),
-            max: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + 1, 5),
-            plotBands: [{
-              from: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 5),
-              to: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 16),
-              color: 'rgba(68, 170, 213, 0.2)',
-              label: {
-                text: '1st Shift',
-                style: {
-                  color: '#606060'
-                }
-              }
-            }, {
-              from: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 16),
-              to: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + 1, 5),
-              color: 'rgba(0, 0, 0, 0.1)', // Light background for 2nd shift
-              label: {
-                text: '2nd Shift',
-                style: {
-                  color: '#606060'
-                }
-              }
-            }]
-          },
-          yAxis: {
-            title: {
-              text: 'Total Distance'
-            }
-          },
-          tooltip: {
-            formatter: function() {
-              return '<b>Press Type: ' + this.series.name + '</b><br/>' +
-                     'Total Distance: ' + this.y + '<br/>' +
-                     'Time: ' + Highcharts.dateFormat('%I:%M %p', this.x);
-            }
-          },
-          plotOptions: {
-            series: {
-              lineWidth: 6, // Increase the line width
-              marker: {
-                radius: 8 // Increase the marker radius
-              }
-            }
-          },
-          series: [{
-            name: '17 Nilpeter',
-            data: data17,
-            color: '#1E90FF' // Blue color for 17 Nilpeter
-          }, {
-            name: '13 Nilpeter',
-            data: data13,
-            color: '#32CD32' // Lime green color for 13 Nilpeter
-          }, {
-            name: 'ETI',
-            data: dataETI,
-            color: '#800080' // Purple color for ETI
-          }, {
-            name: '18 Aztech',
-            data: data18,
-            color: '#FFA500' // Orange color for 18 Aztech
-          }, {
-            name: '13 Aztech',
-            data: data13AZT,
-            color: '#FF4500' // OrangeRed color for 13 Aztech
-          }, {
-            name: 'Slitter',
-            data: dataSlitter,
-            color: '#0000FF' // Blue color for Slitter
-          }]
-        });
+      const filteredData17 = filterDataByPeriod(data17, period);
+      const filteredData13 = filterDataByPeriod(data13, period);
+      const filteredDataETI = filterDataByPeriod(dataETI, period);
+      const filteredData18 = filterDataByPeriod(data18, period);
+      const filteredData13AZT = filterDataByPeriod(data13AZT, period);
+      const filteredDataSlitter = filterDataByPeriod(dataSlitter, period);
+
+      console.log("Filtered Data for Chart - 17 Nilpeter:", filteredData17); // Debugging statement
+      console.log("Filtered Data for Chart - 13 Nilpeter:", filteredData13); // Debugging statement
+      console.log("Filtered Data for Chart - ETI:", filteredDataETI); // Debugging statement
+      console.log("Filtered Data for Chart - 18 Aztech:", filteredData18); // Debugging statement
+      console.log("Filtered Data for Chart - 13 Aztech:", filteredData13AZT); // Debugging statement
+      console.log("Filtered Data for Chart - Slitter:", filteredDataSlitter); // Debugging statement
+
+      if (!chart) {
+        renderChart(filteredData17, filteredData13, filteredDataETI, filteredData18, filteredData13AZT, filteredDataSlitter);
+      } else {
+        updateChart(filteredData17, filteredData13, filteredDataETI, filteredData18, filteredData13AZT, filteredDataSlitter);
       }
 
-      // Function to adjust timestamp by subtracting 4 hours
-      function adjustTimestamp(timestamp) {
-        const date = new Date(timestamp.replace(' ', 'T') + 'Z');
-        date.setUTCHours(date.getUTCHours() - 4); // Subtract 4 hours
-        return date.getTime();
-      }
+      fetchCurrentSpeeds();
+      updateButtonState(period);
+    }
 
-      // Function to fetch data and update the chart
-      function fetchData() {
-        const ref17 = database.ref('17Nilpeter_hourlyData');
-        const ref13 = database.ref('13Nilpeter_hourlyData');
-        const refETI = database.ref('ETI_hourlyData');
-        const ref18 = database.ref('18AZT_hourlyData');
-        const ref13AZT = database.ref('13AZT_hourlyData');
-        const refSlitter = database.ref('Slitter_hourlyData');
-        const data17 = [];
-        const data13 = [];
-        const dataETI = [];
-        const data18 = [];
-        const data13AZT = [];
-        const dataSlitter = [];
+    // Function to update the chart without redrawing the lines
+    function updateChart(data17, data13, dataETI, data18, data13AZT, dataSlitter) {
+      const series = chart.series;
+      series[0].setData(data17, false);
+      series[1].setData(data13, false);
+      series[2].setData(dataETI, false);
+      series[3].setData(data18, false);
+      series[4].setData(data13AZT, false);
+      series[5].setData(dataSlitter, false);
+      chart.redraw();
+    }
 
-        const fetchDataFromRef = (ref, dataArray, name) => {
-          return new Promise((resolve) => {
-            ref.on('value', (snapshot) => {
-              const rawData = snapshot.val();
-              console.log(`${name} data:`, rawData);
-              dataArray.length = 0; // Clear the array
-              for (const key in rawData) {
-                if (rawData.hasOwnProperty(key)) {
-                  const record = rawData[key];
-                  dataArray.push([adjustTimestamp(record.timestamp), record.totalDistance]);
-                }
-              }
-              resolve();
-            });
-          });
-        };
+    // Function to fetch current speeds and update the display
+    function fetchCurrentSpeeds() {
+      const speedRefs = [
+        { ref: database.ref('17Nilpeter/currentSpeed'), name: '17 Nilpeter', distanceRef: database.ref('17Nilpeter/totalDistance') },
+        { ref: database.ref('13Nilpeter/currentSpeed'), name: '13 Nilpeter', distanceRef: database.ref('13Nilpeter/totalDistance') },
+        { ref: database.ref('ETI/currentSpeed'), name: 'ETI', distanceRef: database.ref('ETI/totalDistance') },
+        { ref: database.ref('18AZT/currentSpeed'), name: '18 Aztech', distanceRef: database.ref('18AZT/totalDistance') },
+        { ref: database.ref('13AZT/currentSpeed'), name: '13 Aztech', distanceRef: database.ref('13AZT/totalDistance') },
+        { ref: database.ref('Slitter/currentSpeed'), name: 'Slitter', distanceRef: database.ref('Slitter/totalDistance') }
+      ];
 
-        Promise.all([
-          fetchDataFromRef(ref17, data17, '17Nilpeter_hourlyData'),
-          fetchDataFromRef(ref13, data13, '13Nilpeter_hourlyData'),
-          fetchDataFromRef(refETI, dataETI, 'ETI_hourlyData'),
-          fetchDataFromRef(ref18, data18, '18AZT_hourlyData'),
-          fetchDataFromRef(ref13AZT, data13AZT, '13AZT_hourlyData'),
-          fetchDataFromRef(refSlitter, dataSlitter, 'Slitter_hourlyData')
-        ]).then(() => {
-          console.log("Data for 17 Nilpeter:", data17);
-          console.log("Data for 13 Nilpeter:", data13);
-          console.log("Data for ETI:", dataETI);
-          console.log("Data for 18 Aztech:", data18);
-          console.log("Data for 13 Aztech:", data13AZT);
-          console.log("Data for Slitter:", dataSlitter);
-
-          if (!chart) {
-            renderChart(data17, data13, dataETI, data18, data13AZT, dataSlitter);
-          } else {
-            updateChart(data17, data13, dataETI, data18, data13AZT, dataSlitter);
-          }
-
-          fetchCurrentSpeeds();
-        });
-      }
-
-      // Function to update the chart without redrawing the lines
-      function updateChart(data17, data13, dataETI, data18, data13AZT, dataSlitter) {
-        const series = chart.series;
-        series[0].setData(data17, false);
-        series[1].setData(data13, false);
-        series[2].setData(dataETI, false);
-        series[3].setData(data18, false);
-        series[4].setData(data13AZT, false);
-        series[5].setData(dataSlitter, false);
-        chart.redraw();
-      }
-
-      // Function to fetch current speeds and update the display
-      function fetchCurrentSpeeds() {
-        const speedRefs = [
-          { ref: database.ref('17Nilpeter/currentSpeed'), name: '17 Nilpeter', distanceRef: database.ref('17Nilpeter/totalDistance') },
-          { ref: database.ref('13Nilpeter/currentSpeed'), name: '13 Nilpeter', distanceRef: database.ref('13Nilpeter/totalDistance') },
-          { ref: database.ref('ETI/currentSpeed'), name: 'ETI', distanceRef: database.ref('ETI/totalDistance') },
-          { ref: database.ref('18AZT/currentSpeed'), name: '18 Aztech', distanceRef: database.ref('18AZT/totalDistance') },
-          { ref: database.ref('13AZT/currentSpeed'), name: '13 Aztech', distanceRef: database.ref('13AZT/totalDistance') },
-          { ref: database.ref('Slitter/currentSpeed'), name: 'Slitter', distanceRef: database.ref('Slitter/totalDistance') }
-        ];
-
-        const speedPromises = speedRefs.map(speedRef => {
-          return new Promise((resolve) => {
-            speedRef.ref.on('value', (snapshot) => {
-              const speed = snapshot.val();
-              speedRef.distanceRef.on('value', (distanceSnapshot) => {
-                const totalDistance = distanceSnapshot.val();
-                resolve({ name: speedRef.name, speed: speed, totalDistance: totalDistance });
-              });
+      const speedPromises = speedRefs.map(speedRef => {
+        return new Promise((resolve) => {
+          speedRef.ref.on('value', (snapshot) => {
+            const speed = snapshot.val();
+            speedRef.distanceRef.on('value', (distanceSnapshot) => {
+              const totalDistance = distanceSnapshot.val();
+              resolve({ name: speedRef.name, speed: speed, totalDistance: totalDistance });
             });
           });
         });
+      });
 
-        Promise.all(speedPromises).then(speeds => {
-          updateSpeedDisplay(speeds);
-          updateTotalFootage(speeds);
-        });
-      }
+      Promise.all(speedPromises).then(speeds => {
+        updateSpeedDisplay(speeds);
+        updateTotalFootage(speeds);
+      });
+    }
 
-      // Function to update the speed display dynamically
-      function updateSpeedDisplay(speeds) {
-        const speedContainer = document.getElementById('speedContainer');
+    // Function to update the speed display dynamically
+    function updateSpeedDisplay(speeds) {
+      const speedContainer = document.getElementById('speedContainer');
 
-        // Sort by total distance in descending order
-        speeds.sort((a, b) => b.totalDistance - a.totalDistance);
+      // Sort by total distance in descending order
+      speeds.sort((a, b) => b.totalDistance - a.totalDistance);
 
-        // Create elements for each speed and append to the container
-        speeds.forEach((speedData) => {
-          const speedClass = speedData.speed === 0 ? 'red' :
-                             speedData.speed < 100 ? 'orange' :
-                             speedData.speed < 200 ? 'yellow' :
-                             speedData.speed < 300 ? 'green' :
-                             'gif';
-          const pressColor = speedData.name === '17 Nilpeter' ? '#1E90FF' :
-                             speedData.name === '13 Nilpeter' ? '#32CD32' :
-                             speedData.name === 'ETI' ? '#800080' :
-                             speedData.name === '18 Aztech' ? '#FFA500' :
-                             speedData.name === '13 Aztech' ? '#FF4500' :
-                             '#0000FF'; // Blue color for Slitter
-          let speedDiv = document.querySelector(`div[data-name="${speedData.name}"]`);
-          if (!speedDiv) {
-            speedDiv = document.createElement('div');
-            speedDiv.setAttribute('data-name', speedData.name);
-            speedDiv.innerHTML = `<span class="press-name" style="color: ${pressColor};">${speedData.name}</span><span class="${speedClass}">${speedData.speed}</span>`;
-            speedContainer.appendChild(speedDiv);
-          } else {
-            const speedSpan = speedDiv.querySelector('span:last-child');
-            if (speedSpan.textContent != speedData.speed) {
-              speedSpan.textContent = speedData.speed;
-            }
-            speedSpan.className = `${speedClass}`;
+      // Create elements for each speed and append to the container
+      speeds.forEach((speedData, index) => {
+        const rank = index + 1;
+        const rankText = rank === 1 ? '1st' : rank === 2 ? '2nd' : rank === 3 ? '3rd' : '';
+        const speedClass = speedData.speed === 0 ? 'red' :
+                           speedData.speed < 100 ? 'orange' :
+                           speedData.speed < 200 ? 'yellow' :
+                           speedData.speed < 300 ? 'green' :
+                           'gif';
+        const pressColor = speedData.name === '17 Nilpeter' ? '#1E90FF' :
+                           speedData.name === '13 Nilpeter' ? '#32CD32' :
+                           speedData.name === 'ETI' ? '#800080' :
+                           speedData.name === '18 Aztech' ? '#FFA500' :
+                           speedData.name === '13 Aztech' ? '#FF4500' :
+                           '#0000FF';
+        let speedDiv = document.querySelector(`div[data-name="${speedData.name}"]`);
+        if (!speedDiv) {
+          speedDiv = document.createElement('div');
+          speedDiv.setAttribute('data-name', speedData.name);
+          speedDiv.innerHTML = `<span class="press-name" style="color: ${pressColor};">${speedData.name} <small>${rankText}</small></span><span class="${speedClass}">${speedData.speed}</span>`;
+          speedContainer.appendChild(speedDiv);
+        } else {
+          const speedSpan = speedDiv.querySelector('span:last-child');
+          const pressNameSpan = speedDiv.querySelector('.press-name');
+          if (speedSpan.textContent != speedData.speed) {
+            speedSpan.textContent = speedData.speed;
           }
-        });
-      }
+          if (!pressNameSpan.innerHTML.includes(rankText)) {
+            pressNameSpan.innerHTML = `${speedData.name} <small>${rankText}</small>`;
+          }
+          speedSpan.className = `${speedClass}`;
+        }
+      });
+    }
 
-      // Function to update the total footage
-      function updateTotalFootage(speeds) {
-        const totalFootage = speeds.reduce((acc, speedData) => acc + speedData.totalDistance, 0);
-        const totalFootageElement = document.getElementById('totalFootage');
-        totalFootageElement.textContent = `Total Footage: ${totalFootage.toLocaleString()}`;
-      }
+    // Function to update the total footage
+    function updateTotalFootage(speeds) {
+      const totalFootage = speeds.reduce((acc, speedData) => acc + speedData.totalDistance, 0);
+      const totalFootageElement = document.getElementById('totalFootage');
+      totalFootageElement.textContent = `Total Footage: ${totalFootage.toLocaleString()}`;
+    }
 
-      fetchData();
-      setInterval(fetchData, 5000); // Fetch data every 5 seconds
-      setInterval(fetchCurrentSpeeds, 5000); // Fetch current speeds every 5 seconds
-    });
+    // Function to update button state
+    function updateButtonState(period) {
+      document.getElementById('last24HoursBtn').classList.remove('active');
+      document.getElementById('lastMonthBtn').classList.remove('active');
+      document.getElementById('lastYearBtn').classList.remove('active');
+      switch (period) {
+        case 'last24Hours':
+          document.getElementById('last24HoursBtn').classList.add('active');
+          break;
+        case 'lastMonth':
+          document.getElementById('lastMonthBtn').classList.add('active');
+          break;
+        case 'lastYear':
+          document.getElementById('lastYearBtn').classList.add('active');
+          break;
+      }
+    }
+
+    // Automatically cycle through time options
+    const timePeriods = ['last24Hours', 'lastMonth', 'lastYear'];
+    let currentPeriodIndex = 0;
+
+    function cycleTimePeriods() {
+      fetchData(timePeriods[currentPeriodIndex]);
+      currentPeriodIndex = (currentPeriodIndex + 1) % timePeriods.length;
+    }
+
+    // Fetch initial data
+    fetchData();
+    setInterval(fetchCurrentSpeeds, 5000); // Fetch current speeds every 5 seconds
+    setInterval(cycleTimePeriods, 10000); // Cycle through time options every 10 seconds
+
   </script>
 </body>
 </html>
