@@ -21,23 +21,17 @@
       font-family: Arial, sans-serif;
     }
     #container {
-      width: 100%;
+      width: 75%;
       height: 70vh;
-    }
-    .total-footage {
-      font-size: 36px;
-      font-weight: bold;
-      text-align: center;
-      margin: 10px 0;
     }
     .current-speed {
       margin-top: 10px;
       display: flex;
-      justify-content: space-around;
+      justify-content: center;
       flex-wrap: wrap;
     }
     .current-speed div {
-      margin-bottom: 10px;
+      margin: 10px;
       font-size: 24px;
       font-weight: bold;
       display: flex;
@@ -46,7 +40,7 @@
       text-align: center;
     }
     .current-speed span {
-      font-size: 48px;
+      font-size: 36px;
       padding: 10px 20px;
       border-radius: 5px;
       font-weight: bold;
@@ -61,6 +55,7 @@
       font-size: 20px;
       display: block;
       white-space: nowrap;
+      color: #999; /* Default greyed out color */
     }
     .current-speed span.red {
       background-color: red;
@@ -78,43 +73,60 @@
       background-color: green;
       color: white;
     }
-    .current-speed span.gif {
-      background-image: url('https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExcmgwdmVydm1kNzBtNXhuYmJuNnl0eTYyZW94ajNsemw1Nnhyd3FnMSZlcD12MV9pbnRlcm5faWQmY3Q9Zw/da6Pwym8AaP5GlQd7W/giphy-downsized-large.gif');
-      background-size: cover;
+    .current-speed span.fire {
+      background: linear-gradient(45deg, red, orange, yellow);
       color: white;
+      animation: fire 1s infinite;
     }
-    .chart-options {
+    @keyframes fire {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .press-details {
+      width: 25%;
+      overflow-y: auto;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
+      align-items: center;
       margin: 10px 0;
     }
-    .chart-options button {
-      margin: 0 5px;
-      padding: 10px 20px;
-      font-size: 16px;
-      cursor: pointer;
-      border: none;
-      border-radius: 5px;
-      background-color: #007bff;
-      color: white;
-      transition: background-color 0.3s;
+    .press-details table {
+      width: 90%;
+      border-collapse: collapse;
     }
-    .chart-options button:hover {
-      background-color: #0056b3;
+    .press-details th, .press-details td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: center;
     }
-    .chart-options button.active {
-      background-color: #0056b3;
+    .press-details th {
+      background-color: #f2f2f2;
+      font-size: 18px;
+    }
+    .press-details .top3 td {
+      font-weight: bold;
+    }
+    .press-details .gold td {
+      background-color: gold;
+    }
+    .press-details .silver td {
+      background-color: silver;
+    }
+    .press-details .bronze td {
+      background-color: #cd7f32;
+    }
+    .press-details .greyed-out td {
+      background-color: #f2f2f2;
+      color: #999;
     }
   </style>
 </head>
 <body>
-  <div class="total-footage" id="totalFootage">Total Footage: 0</div>
-  <div class="chart-options">
-    <button id="last24HoursBtn" onclick="fetchData('last24Hours')" title="Last 24 Hours">24H</button>
-    <button id="lastMonthBtn" onclick="fetchData('lastMonth')" title="Last Month">1M</button>
-    <button id="lastYearBtn" onclick="fetchData('lastYear')" title="Last Year">1Y</button>
+  <div style="display: flex; height: 70vh;">
+    <div class="press-details" id="pressDetails"></div>
+    <div id="container"></div>
   </div>
-  <div id="container"></div>
   <div id="speedContainer" class="current-speed"></div>
 
   <script>
@@ -134,30 +146,69 @@
     const database = firebase.database();
 
     let chart = null;
+    let chartData = {};
+    let currentPeriod = 'last24Hours';
 
     // Function to render the chart
-    function renderChart(data17, data13, dataETI, data18, data13AZT, dataSlitter) {
+    function renderChart(data, period, showTop3) {
+      let seriesOptions = Object.keys(data).map(key => {
+        return {
+          name: key,
+          data: data[key],
+          color: getColorForPress(key)
+        };
+      });
+
+      if (showTop3) {
+        seriesOptions.sort((a, b) => b.data[b.data.length - 1][1] - a.data[a.data.length - 1][1]);
+        seriesOptions = seriesOptions.slice(0, 3);
+
+        if (period === 'last24Hours') {
+          // Apply gradient effect to the top line
+          seriesOptions[0].color = {
+            linearGradient: { x1: 0, y1: 0, x2: 1, y2: 0 },
+            stops: [
+              [0, '#FF0000'],
+              [1, '#FFFF00']
+            ]
+          };
+        }
+      }
+
+      const periodText = {
+        last24Hours: 'Last 24 Hours',
+        lastMonth: 'Last Month',
+        lastYear: 'Last Year'
+      }[period];
+
+      const top3Text = showTop3 ? ' (Top 3)' : ' (All)';
+
       chart = Highcharts.chart('container', {
         chart: {
           type: 'line'
         },
         title: {
-          text: 'Press Type and Total Distance Over Time'
+          text: `${periodText}${top3Text}`,
+          style: {
+            fontSize: '30px',
+            fontWeight: 'bold',
+            fontFamily: 'Arial, sans-serif'
+          }
         },
         xAxis: {
           type: 'datetime',
           title: {
             text: 'Time'
           },
-          tickInterval: 3600 * 1000, // One hour interval
+          tickInterval: (period === 'last24Hours' ? 30 * 60 * 1000 : 3600 * 1000), // Adjust tick interval based on period
           labels: {
             formatter: function() {
               return Highcharts.dateFormat('%I:%M %p', this.value);
             }
           },
           plotBands: [{
-            from: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 5),
-            to: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 16),
+            from: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 9),
+            to: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 20),
             color: 'rgba(68, 170, 213, 0.2)',
             label: {
               text: '1st Shift',
@@ -166,8 +217,8 @@
               }
             }
           }, {
-            from: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 16),
-            to: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + 1, 5),
+            from: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 20),
+            to: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + 1, 9),
             color: 'rgba(0, 0, 0, 0.1)',
             label: {
               text: '2nd Shift',
@@ -197,39 +248,16 @@
             }
           }
         },
-        series: [{
-          name: '17 Nilpeter',
-          data: data17,
-          color: '#1E90FF'
-        }, {
-          name: '13 Nilpeter',
-          data: data13,
-          color: '#32CD32'
-        }, {
-          name: 'ETI',
-          data: dataETI,
-          color: '#800080'
-        }, {
-          name: '18 Aztech',
-          data: data18,
-          color: '#FFA500'
-        }, {
-          name: '13 Aztech',
-          data: data13AZT,
-          color: '#FF4500'
-        }, {
-          name: 'Slitter',
-          data: dataSlitter,
-          color: '#0000FF'
-        }]
+        series: seriesOptions
       });
+
+      updatePressDetails(seriesOptions, periodText);
     }
 
-    // Function to adjust timestamp by subtracting 4 hours and 5 minutes
+    // Function to adjust timestamp by subtracting 4 hours
     function adjustTimestamp(timestamp) {
       const date = new Date(timestamp.replace(' ', 'T') + 'Z');
-      date.setUTCHours(date.getUTCHours() - 4);
-      date.setUTCMinutes(date.getUTCMinutes() - 5); // Subtracting 5 minutes
+      date.setUTCHours(date.getUTCHours() + 1); // Subtracting 4 hours
       return date.getTime();
     }
 
@@ -305,13 +333,6 @@
         fetchDataFromRef(refSlitter, dataSlitter, 'Slitter_yearlyData')
       ]);
 
-      console.log("Filtered Data for 17 Nilpeter:", data17); // Debugging statement
-      console.log("Filtered Data for 13 Nilpeter:", data13); // Debugging statement
-      console.log("Filtered Data for ETI:", dataETI); // Debugging statement
-      console.log("Filtered Data for 18 Aztech:", data18); // Debugging statement
-      console.log("Filtered Data for 13 Aztech:", data13AZT); // Debugging statement
-      console.log("Filtered Data for Slitter:", dataSlitter); // Debugging statement
-
       const filteredData17 = filterDataByPeriod(data17, period);
       const filteredData13 = filterDataByPeriod(data13, period);
       const filteredDataETI = filterDataByPeriod(dataETI, period);
@@ -319,33 +340,20 @@
       const filteredData13AZT = filterDataByPeriod(data13AZT, period);
       const filteredDataSlitter = filterDataByPeriod(dataSlitter, period);
 
-      console.log("Filtered Data for Chart - 17 Nilpeter:", filteredData17); // Debugging statement
-      console.log("Filtered Data for Chart - 13 Nilpeter:", filteredData13); // Debugging statement
-      console.log("Filtered Data for Chart - ETI:", filteredDataETI); // Debugging statement
-      console.log("Filtered Data for Chart - 18 Aztech:", filteredData18); // Debugging statement
-      console.log("Filtered Data for Chart - 13 Aztech:", filteredData13AZT); // Debugging statement
-      console.log("Filtered Data for Chart - Slitter:", filteredDataSlitter); // Debugging statement
+      chartData = {
+        '17 Nilpeter': filteredData17,
+        '13 Nilpeter': filteredData13,
+        'ETI': filteredDataETI,
+        '18 Aztech': filteredData18,
+        '13 Aztech': filteredData13AZT,
+        'Slitter': filteredDataSlitter
+      };
 
-      if (!chart) {
-        renderChart(filteredData17, filteredData13, filteredDataETI, filteredData18, filteredData13AZT, filteredDataSlitter);
-      } else {
-        updateChart(filteredData17, filteredData13, filteredDataETI, filteredData18, filteredData13AZT, filteredDataSlitter);
-      }
+      renderChart(chartData, period, false);
+      setTimeout(() => renderChart(chartData, period, true), 30000);
 
       fetchCurrentSpeeds();
       updateButtonState(period);
-    }
-
-    // Function to update the chart without redrawing the lines
-    function updateChart(data17, data13, dataETI, data18, data13AZT, dataSlitter) {
-      const series = chart.series;
-      series[0].setData(data17, false);
-      series[1].setData(data13, false);
-      series[2].setData(dataETI, false);
-      series[3].setData(data18, false);
-      series[4].setData(data13AZT, false);
-      series[5].setData(dataSlitter, false);
-      chart.redraw();
     }
 
     // Function to fetch current speeds and update the display
@@ -385,34 +393,23 @@
       speeds.sort((a, b) => b.totalDistance - a.totalDistance);
 
       // Create elements for each speed and append to the container
-      speeds.forEach((speedData, index) => {
-        const rank = index + 1;
-        const rankText = rank === 1 ? '1st' : rank === 2 ? '2nd' : rank === 3 ? '3rd' : '';
+      speeds.forEach((speedData) => {
         const speedClass = speedData.speed === 0 ? 'red' :
                            speedData.speed < 100 ? 'orange' :
                            speedData.speed < 200 ? 'yellow' :
                            speedData.speed < 300 ? 'green' :
-                           'gif';
-        const pressColor = speedData.name === '17 Nilpeter' ? '#1E90FF' :
-                           speedData.name === '13 Nilpeter' ? '#32CD32' :
-                           speedData.name === 'ETI' ? '#800080' :
-                           speedData.name === '18 Aztech' ? '#FFA500' :
-                           speedData.name === '13 Aztech' ? '#FF4500' :
-                           '#0000FF';
+                           'fire';
+        const pressColor = getColorForPress(speedData.name);
         let speedDiv = document.querySelector(`div[data-name="${speedData.name}"]`);
         if (!speedDiv) {
           speedDiv = document.createElement('div');
           speedDiv.setAttribute('data-name', speedData.name);
-          speedDiv.innerHTML = `<span class="press-name" style="color: ${pressColor};">${speedData.name} <small>${rankText}</small></span><span class="${speedClass}">${speedData.speed}</span>`;
+          speedDiv.innerHTML = `<span class="press-name" style="color: ${pressColor};">${speedData.name}</span><span class="${speedClass}">${speedData.speed}</span>`;
           speedContainer.appendChild(speedDiv);
         } else {
           const speedSpan = speedDiv.querySelector('span:last-child');
-          const pressNameSpan = speedDiv.querySelector('.press-name');
           if (speedSpan.textContent != speedData.speed) {
             speedSpan.textContent = speedData.speed;
-          }
-          if (!pressNameSpan.innerHTML.includes(rankText)) {
-            pressNameSpan.innerHTML = `${speedData.name} <small>${rankText}</small>`;
           }
           speedSpan.className = `${speedClass}`;
         }
@@ -444,6 +441,48 @@
       }
     }
 
+    // Function to get color for press type
+    function getColorForPress(name) {
+      return name === '17 Nilpeter' ? '#1E90FF' :
+             name === '13 Nilpeter' ? '#32CD32' :
+             name === 'ETI' ? '#800080' :
+             name === '18 Aztech' ? '#FFA500' :
+             name === '13 Aztech' ? '#FF4500' :
+             '#0000FF';
+    }
+
+    // Function to update press details
+    function updatePressDetails(seriesOptions, periodText) {
+      const pressDetails = document.getElementById('pressDetails');
+      const sortedPresses = seriesOptions.sort((a, b) => b.data[b.data.length - 1][1] - a.data[a.data.length - 1][1]);
+      const pressHtml = sortedPresses.map((series, index) => {
+        const rank = index + 1;
+        const rankClass = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : 'greyed-out';
+        return `
+          <tr class="${rankClass}">
+            <td>${rank <= 3 ? `<span style="font-size: 1.5em;">${rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉'}</span>` : ''}</td>
+            <td>${series.name}</td>
+            <td>${series.data[series.data.length - 1][1].toLocaleString()}</td>
+          </tr>
+        `;
+      }).join('');
+
+      pressDetails.innerHTML = `
+        <table>
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Press</th>
+              <th>Total Distance</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${pressHtml}
+          </tbody>
+        </table>
+      `;
+    }
+
     // Automatically cycle through time options
     const timePeriods = ['last24Hours', 'lastMonth', 'lastYear'];
     let currentPeriodIndex = 0;
@@ -456,7 +495,7 @@
     // Fetch initial data
     fetchData();
     setInterval(fetchCurrentSpeeds, 5000); // Fetch current speeds every 5 seconds
-    setInterval(cycleTimePeriods, 10000); // Cycle through time options every 10 seconds
+    setInterval(cycleTimePeriods, 60000); // Cycle through time options every 60 seconds
 
   </script>
 </body>
