@@ -128,6 +128,7 @@
     <div id="container"></div>
   </div>
   <div id="speedContainer" class="current-speed"></div>
+  <div id="dailyTableContainer"></div>
 
   <script>
     // Firebase configuration
@@ -185,67 +186,76 @@
 
       chart = Highcharts.chart('container', {
         chart: {
-          type: 'line'
+          type: 'line',
+          backgroundColor: '#f8f8f8',
+          style: {
+            fontFamily: 'Arial, sans-serif'
+          }
         },
         title: {
           text: `${periodText}${top3Text}`,
           style: {
-            fontSize: '30px',
-            fontWeight: 'bold',
-            fontFamily: 'Arial, sans-serif'
+            fontSize: '24px',
+            fontWeight: 'bold'
           }
         },
         xAxis: {
           type: 'datetime',
           title: {
-            text: 'Time'
+            text: 'Time',
+            style: {
+              fontSize: '14px'
+            }
           },
           tickInterval: (period === 'last24Hours' ? 30 * 60 * 1000 : 3600 * 1000), // Adjust tick interval based on period
           labels: {
             formatter: function() {
               return Highcharts.dateFormat('%I:%M %p', this.value);
+            },
+            style: {
+              fontSize: '12px'
             }
           },
-          plotBands: [{
-            from: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 9),
-            to: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 20),
-            color: 'rgba(68, 170, 213, 0.2)',
-            label: {
-              text: '1st Shift',
-              style: {
-                color: '#606060'
-              }
-            }
-          }, {
-            from: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate(), 20),
-            to: Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate() + 1, 9),
-            color: 'rgba(0, 0, 0, 0.1)',
-            label: {
-              text: '2nd Shift',
-              style: {
-                color: '#606060'
-              }
-            }
-          }]
+          gridLineWidth: 1,
+          gridLineColor: '#e6e6e6'
         },
         yAxis: {
           title: {
-            text: 'Total Distance'
-          }
+            text: 'Total Distance',
+            style: {
+              fontSize: '14px'
+            }
+          },
+          labels: {
+            style: {
+              fontSize: '12px'
+            }
+          },
+          gridLineWidth: 1,
+          gridLineColor: '#e6e6e6'
         },
         tooltip: {
           formatter: function() {
             return '<b>Press Type: ' + this.series.name + '</b><br/>' +
                    'Total Distance: ' + this.y + '<br/>' +
                    'Time: ' + Highcharts.dateFormat('%I:%M %p', this.x);
-          }
+          },
+          backgroundColor: '#ffffff',
+          borderColor: '#cccccc',
+          borderRadius: 10,
+          shadow: true
         },
         plotOptions: {
           series: {
-            lineWidth: 6,
+            lineWidth: 2,
             marker: {
               enabled: false
             }
+          }
+        },
+        legend: {
+          itemStyle: {
+            fontSize: '14px'
           }
         },
         series: seriesOptions
@@ -382,6 +392,7 @@
       Promise.all(speedPromises).then(speeds => {
         updateSpeedDisplay(speeds);
         updateTotalFootage(speeds);
+        updateDailyTable(speeds);
       });
     }
 
@@ -483,6 +494,49 @@
       `;
     }
 
+    // Function to update the daily table
+    function updateDailyTable(speeds) {
+      const tableContainer = document.getElementById('dailyTableContainer');
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 6, 0, 0);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 1);
+
+      const timeIntervals = [];
+      for (let time = start; time < end; time.setHours(time.getHours() + 1)) {
+        timeIntervals.push(new Date(time));
+      }
+
+      const tableHtml = `
+        <table border="1">
+          <thead>
+            <tr>
+              <th>Time</th>
+              ${speeds.map(speed => `<th>${speed.name}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>
+            ${timeIntervals.map(interval => `
+              <tr>
+                <td>${interval.getHours()}:00</td>
+                ${speeds.map(speed => `<td>${getSpeedAtTime(speed, interval)}</td>`).join('')}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+
+      tableContainer.innerHTML = tableHtml;
+    }
+
+    // Function to get speed at a specific time
+    function getSpeedAtTime(speedData, time) {
+      const closestRecord = speedData.speedRecords.reduce((prev, curr) => {
+        return (Math.abs(curr.timestamp - time) < Math.abs(prev.timestamp - time) ? curr : prev);
+      });
+      return closestRecord ? closestRecord.speed : 0;
+    }
+
     // Automatically cycle through time options
     const timePeriods = ['last24Hours', 'lastMonth', 'lastYear'];
     let currentPeriodIndex = 0;
@@ -500,4 +554,5 @@
   </script>
 </body>
 </html>
+
 
