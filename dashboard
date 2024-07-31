@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Speed Dashboard</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      justify-content: center;
+      align-items: center;
+    }
+    .dashboard {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: nowrap;
+      width: 100%;
+      overflow: hidden; /* Prevent horizontal scrolling */
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .press-speed {
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      margin: 0 10px;
+      padding: 20px;
+      text-align: center;
+      flex: 1;
+      min-width: 150px;
+      max-width: 250px;
+      box-sizing: border-box;
+      position: relative;
+    }
+    .press-name {
+      font-size: 1.5vw;
+      color: #555;
+      margin-bottom: 1vh;
+      position: relative;
+      z-index: 1;
+    }
+    .speed-value {
+      font-size: 2vw;
+      font-weight: bold;
+      color: #333;
+      animation: fadeIn 0.5s;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .fire-icon {
+      position: absolute;
+      top: -30px; /* Adjust as needed */
+      left: 50%;
+      transform: translateX(-50%);
+      width: 50px; /* Adjust as needed */
+      height: 50px; /* Adjust as needed */
+      background: url('')';
+      background-size: contain;
+      display: none; /* Initially hide the fire icon */
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard" id="dashboard"></div>
+
+  <script>
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "realtime-database-8bbe2.com",
+      databaseURL: "https://realtime-database-8bbe2-default-rtdb.firebaseio.com",
+      projectId: "realtime-database-8bbe2",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    // Store previous speeds
+    const previousSpeeds = {};
+
+    // Function to fetch current speeds and update the display
+    function fetchCurrentSpeeds() {
+      const presses = [
+        { ref: database.ref('17Nilpeter/currentSpeed'), name: '17 Nilpeter' },
+        { ref: database.ref('13Nilpeter/currentSpeed'), name: '13 Nilpeter' },
+        { ref: database.ref('ETI/currentSpeed'), name: 'ETI' },
+        { ref: database.ref('18AZT/currentSpeed'), name: '18 Aztech' },
+        { ref: database.ref('13AZT/currentSpeed'), name: '13 Aztech' },
+        { ref: database.ref('Slitter/currentSpeed'), name: 'Slitter' }
+      ];
+
+      const speedPromises = presses.map(press => {
+        return new Promise((resolve) => {
+          press.ref.on('value', (snapshot) => {
+            const speed = snapshot.val();
+            resolve({ name: press.name, speed: speed });
+          });
+        });
+      });
+
+      Promise.all(speedPromises).then(speeds => {
+        updateDashboard(speeds);
+      }).catch(error => {
+        console.error('Error fetching speeds:', error);
+      });
+    }
+
+    // Function to update the dashboard display dynamically
+    function updateDashboard(speeds) {
+      const dashboard = document.getElementById('dashboard');
+
+      speeds.forEach((pressData) => {
+        const pressId = pressData.name.replace(/\s/g, '');
+        let pressDiv = document.getElementById(pressId);
+
+        if (!pressDiv) {
+          pressDiv = document.createElement('div');
+          pressDiv.className = 'press-speed';
+          pressDiv.id = pressId;
+          pressDiv.innerHTML = `
+            <div class="press-name" id="name-${pressId}">${pressData.name}</div>
+            <div class="speed-value" id="speed-${pressId}">${pressData.speed}</div>
+            <div class="fire-icon" id="fire-${pressId}"></div>
+          `;
+          dashboard.appendChild(pressDiv);
+        }
+
+        // Animate value from previous speed to current speed
+        const previousSpeed = previousSpeeds[pressData.name] || 0;
+        animateValue(
+          document.getElementById(`speed-${pressId}`),
+          previousSpeed,
+          pressData.speed,
+          1000
+        );
+
+        // Update previous speed
+        previousSpeeds[pressData.name] = pressData.speed;
+
+        // Adjust fire animation based on speed
+        const fireElement = document.getElementById(`fire-${pressId}`);
+        if (pressData.speed > 0) {
+          fireElement.style.display = 'block';
+          const scale = Math.min(1 + pressData.speed / 100, 2); // Limit max scale
+          fireElement.style.width = `${50 * scale}px`;
+          fireElement.style.height = `${50 * scale}px`;
+        } else {
+          fireElement.style.display = 'none';
+        }
+      });
+    }
+
+    // Function to animate the number change
+    function animateValue(obj, start, end, duration) {
+      let startTimestamp = null;
+      const step = (timestamp) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+        obj.textContent = Math.floor(progress * (end - start) + start);
+        if (progress < 1) {
+          window.requestAnimationFrame(step);
+        }
+      };
+      window.requestAnimationFrame(step);
+    }
+
+    // Fetch initial data
+    fetchCurrentSpeeds();
+    setInterval(fetchCurrentSpeeds, 5000); // Fetch current speeds every 5 seconds
+  </script>
+</body>
+</html>
